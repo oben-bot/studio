@@ -4,11 +4,13 @@
 import { identifyOpportunities as identifyOpportunitiesFlow, IdentifyOpportunitiesOutput as IdentifyOpportunitiesOutputInternal } from '@/ai/flows/identify-opportunities';
 import { classifyOpportunity as classifyOpportunityFlow } from '@/ai/flows/classify-opportunities';
 import { suggestMonetizationStrategy as suggestMonetizationStrategyFlow } from '@/ai/flows/suggest-monetization-strategy';
+import { getRedemptionSteps as getRedemptionStepsFlow } from '@/ai/flows/get-redemption-steps';
 import { z } from 'zod';
 
 export type { IdentifyOpportunitiesOutput, IdentifyOpportunitiesInput } from '@/ai/flows/identify-opportunities';
 export type { ClassifyOpportunityOutput, ClassifyOpportunityInput } from '@/ai/flows/classify-opportunities';
 export type { SuggestMonetizationStrategyOutput, SuggestMonetizationStrategyInput } from '@/ai/flows/suggest-monetization-strategy';
+export type { GetRedemptionStepsOutput, GetRedemptionStepsInput } from '@/ai/flows/get-redemption-steps';
 export type Opportunity = IdentifyOpportunitiesOutputInternal[0];
 
 const identifySchema = z.object({
@@ -70,5 +72,19 @@ export async function getClassifyAndSuggest(opportunity: Opportunity) {
     } catch (error) {
         console.error("Error in getClassifyAndSuggest action:", error);
         return { error: 'No se pudo analizar la oportunidad.', classification: null, suggestion: null };
+    }
+}
+
+export async function getRedemptionStepsAction(opportunity: Opportunity) {
+    try {
+        const result = await getRedemptionStepsFlow({
+            title: opportunity.title,
+            platform: opportunity.platform,
+            details: opportunity.details,
+        });
+        return { steps: result.steps, error: null };
+    } catch (error) {
+        console.error("Error in getRedemptionStepsAction:", error);
+        return { error: 'No se pudieron generar los pasos para canjear la oferta.', steps: null };
     }
 }

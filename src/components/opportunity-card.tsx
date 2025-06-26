@@ -5,8 +5,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Lightbulb, Loader2, Clock, AlertTriangle, BarChart3, TrendingUp, ShieldCheck } from 'lucide-react';
-import { getClassifyAndSuggest, ClassifyOpportunityOutput, SuggestMonetizationStrategyOutput, Opportunity } from '@/app/actions';
+import { ExternalLink, Lightbulb, Loader2, Clock, AlertTriangle, BarChart3, TrendingUp, HelpCircle } from 'lucide-react';
+import { getClassifyAndSuggest, ClassifyOpportunityOutput, SuggestMonetizationStrategyOutput, Opportunity, getRedemptionStepsAction } from '@/app/actions';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Skeleton } from './ui/skeleton';
@@ -56,6 +56,11 @@ export function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const [steps, setSteps] = useState<string[] | null>(null);
+  const [isStepsLoading, setIsStepsLoading] = useState(false);
+  const [stepsError, setStepsError] = useState<string | null>(null);
+
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
   const [isUrgent, setIsUrgent] = useState(false);
 
@@ -97,6 +102,19 @@ export function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
       setAnalysis({ classification: result.classification, suggestion: result.suggestion });
     }
     setIsLoading(false);
+  };
+  
+  const handleGetSteps = async () => {
+    if (steps) return;
+    setIsStepsLoading(true);
+    setStepsError(null);
+    const result = await getRedemptionStepsAction(opportunity);
+    if (result.error) {
+      setStepsError(result.error);
+    } else {
+      setSteps(result.steps);
+    }
+    setIsStepsLoading(false);
   };
 
   return (
@@ -144,6 +162,25 @@ export function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
                       <p className="text-muted-foreground italic">"{analysis.suggestion.reasoning}"</p>
                     </div>
                   )}
+
+                  <div className="pt-2">
+                    { !isStepsLoading && !steps && !stepsError && (
+                      <Button onClick={handleGetSteps} variant="outline" size="sm" className="w-full">
+                        <HelpCircle className="w-4 h-4 mr-2" />
+                        Mostrar pasos para canjear
+                      </Button>
+                    )}
+                    {isStepsLoading && <div className="flex items-center justify-center gap-2 mt-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Generando pasos...</div>}
+                    {stepsError && <p className="text-destructive text-sm mt-2">{stepsError}</p>}
+                    {steps && (
+                      <div className="mt-2 space-y-2">
+                          <h4 className="font-semibold flex items-center gap-2"><HelpCircle className="w-4 h-4 text-primary" />Pasos para Canjear</h4>
+                          <ol className="list-decimal list-inside space-y-1 text-muted-foreground pl-2">
+                              {steps.map((step, index) => <li key={index}>{step}</li>)}
+                          </ol>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </AccordionContent>

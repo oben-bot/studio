@@ -41,7 +41,7 @@ export function OpportunityHunter() {
           <form action={formAction} className="space-y-4">
             <Textarea
               name="ecommerceData"
-              placeholder="Ej: 'Cupón de 20% en audífonos en Amazon MX, vence en 2 días. Precio: $1500, ahora $1200...'"
+              placeholder="Ej: 'Cupón de 20% en Liverpool para audífonos, vence en 2 días. Oferta en Coppel: 3x2 en llantas. En Amazon MX, kit de herramientas a $1200...'"
               rows={8}
               className="bg-background/50 focus:border-primary"
               required
