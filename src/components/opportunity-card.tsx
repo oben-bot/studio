@@ -11,15 +11,15 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Skeleton } from './ui/skeleton';
 
-const getPlatformUrl = (platform: string): string => {
+const getPlatformUrl = (platform: string, title: string): string => {
   const sanitizedPlatform = platform.toLowerCase();
   if (sanitizedPlatform.includes('mercado libre')) {
-    return 'https://www.mercadolibre.com.mx/';
+    return `https://listado.mercadolibre.com.mx/${encodeURIComponent(title.replace(/\s+/g, '-'))}`;
   }
   if (sanitizedPlatform.includes('amazon')) {
-    return 'https://www.amazon.com.mx/';
+    return `https://www.amazon.com.mx/s?k=${encodeURIComponent(title)}`;
   }
-  return '#';
+  return `https://www.google.com/search?q=${encodeURIComponent(`${platform} ${title}`)}`;
 };
 
 const parseExpiryString = (expiry?: string): Date | null => {
@@ -152,8 +152,8 @@ export function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
       </CardContent>
       <CardFooter>
         <Button asChild className="w-full" variant="default">
-          <a href={getPlatformUrl(opportunity.platform)} target="_blank" rel="noopener noreferrer">
-            Reclamar Oferta <ExternalLink className="ml-2 h-4 w-4" />
+          <a href={getPlatformUrl(opportunity.platform, opportunity.title)} target="_blank" rel="noopener noreferrer">
+            Ver Oferta <ExternalLink className="ml-2 h-4 w-4" />
           </a>
         </Button>
       </CardFooter>
