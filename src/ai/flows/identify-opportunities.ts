@@ -1,4 +1,3 @@
-// This file uses server-side code.
 'use server';
 
 /**
@@ -21,7 +20,7 @@ const OpportunitySchema = z.object({
   title: z.string().describe('The title of the opportunity.'),
   platform: z.string().describe('The e-commerce platform or store where the opportunity exists (e.g., Liverpool, Coppel, Amazon MX).'),
   expiry: z.string().optional().describe('The expiration date and time of the opportunity, if applicable.'),
-  estimatedMargin: z.string().describe('The estimated profit margin or savings associated with the opportunity.'),
+  estimatedMargin: z.string().optional().describe('The estimated profit margin or savings associated with the opportunity.'),
   action: z.string().describe('Recommended action to take (e.g., purchase, redeem coupon).'),
   details: z.string().describe('Additional relevant details about the opportunity.'),
 });
@@ -41,9 +40,11 @@ const identifyOpportunitiesPrompt = ai.definePrompt({
 
   Analyze the following e-commerce data. The data may contain information from multiple e-commerce platforms or stores. You must identify every single potential opportunity, such as coupons, special offers, or pricing errors. Do not stop after finding the first one.
 
-  For EACH opportunity found, create an object with the following fields: title, platform, expiry, estimatedMargin, action, and details. The 'platform' field must accurately reflect the name of the store or website where the opportunity is found (e.g., Liverpool, Coppel, Amazon MX, etc.).
+  For EACH opportunity found, create an object with the following fields: title, platform, expiry, estimatedMargin, action, and details.
+  - The 'platform' field must accurately reflect the name of the store or website where the opportunity is found (e.g., Liverpool, Coppel, Amazon MX, etc.).
+  - The 'estimatedMargin' field is optional. Only include it if you can confidently estimate a margin.
 
-  Return a complete list containing ALL the opportunities you have identified. If you find three opportunities, your output should be an array of three objects.
+  Return a complete list containing ALL the opportunities you have identified. The output MUST be a JSON array of objects, even if only one opportunity is found.
 
   E-commerce Data: {{{ecommerceData}}}
   `,

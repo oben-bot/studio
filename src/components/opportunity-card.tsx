@@ -133,7 +133,7 @@ export function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
       </CardHeader>
       <CardContent className="flex-grow space-y-4">
         <div className="flex flex-wrap gap-2 text-sm">
-          <Badge variant="outline" className="border-green-500/50 text-green-400"><TrendingUp className="h-3 w-3 mr-1.5" /> Margen: {opportunity.estimatedMargin}</Badge>
+          {opportunity.estimatedMargin && <Badge variant="outline" className="border-green-500/50 text-green-400"><TrendingUp className="h-3 w-3 mr-1.5" /> Margen: {opportunity.estimatedMargin}</Badge>}
           {timeLeft && <Badge variant="outline" className="flex items-center gap-1.5"><Clock className="h-3 w-3" /> {timeLeft}</Badge>}
         </div>
         <p className="text-sm text-muted-foreground">{opportunity.details}</p>

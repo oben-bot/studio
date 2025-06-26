@@ -49,7 +49,8 @@ export async function getClassifyAndSuggest(opportunity: Opportunity) {
     // These are derived guesses since the identification flow doesn't provide them.
     // A more robust solution would involve a more advanced identification flow.
     const investmentLevel = opportunity.title.toLowerCase().includes('cupón') || opportunity.title.toLowerCase().includes('gratis') ? 'Gratis' : 'Inversión Mínima';
-    const roiPotential = (parseInt(opportunity.estimatedMargin) > 40) ? 'Alto ROI' : 'Medio ROI';
+    const estimatedMargin = opportunity.estimatedMargin || '0';
+    const roiPotential = (parseInt(estimatedMargin) > 40) ? 'Alto ROI' : 'Medio ROI';
 
     try {
         const [classification, suggestion] = await Promise.all([
@@ -58,14 +59,14 @@ export async function getClassifyAndSuggest(opportunity: Opportunity) {
                 description: opportunity.details,
                 platform: opportunity.platform,
                 expirationDate: opportunity.expiry || 'No especificada',
-                estimatedMargin: opportunity.estimatedMargin,
+                estimatedMargin: estimatedMargin,
                 investmentLevel,
                 roiPotential,
             }),
             suggestMonetizationStrategyFlow({
                 opportunityTitle: opportunity.title,
                 opportunityPlatform: opportunity.platform,
-                opportunityDescription: `Detalles: ${opportunity.details}. Margen estimado: ${opportunity.estimatedMargin}. Expira: ${opportunity.expiry || 'No especificada'}`,
+                opportunityDescription: `Detalles: ${opportunity.details}. Margen estimado: ${estimatedMargin}. Expira: ${opportunity.expiry || 'No especificada'}`,
             })
         ]);
         return { classification, suggestion, error: null };
