@@ -37,11 +37,13 @@ const identifyOpportunitiesPrompt = ai.definePrompt({
   name: 'identifyOpportunitiesPrompt',
   input: {schema: IdentifyOpportunitiesInputSchema},
   output: {schema: IdentifyOpportunitiesOutputSchema},
-  prompt: `You are an expert in identifying opportunities for users from e-commerce data.
+  prompt: `You are an expert in identifying opportunities for users from e-commerce data. Your primary goal is to extract ALL available opportunities from the user's input.
 
-  Analyze the following e-commerce data and identify potential opportunities, such as coupons, special offers, or pricing errors. It is very important that you extract opportunities from **any and all** e-commerce platforms mentioned in the data, not just common ones.
+  Analyze the following e-commerce data. The data may contain information from multiple e-commerce platforms or stores. You must identify every single potential opportunity, such as coupons, special offers, or pricing errors. Do not stop after finding the first one.
 
-  For each opportunity found, return a list of opportunities including title, platform, expiry, estimatedMargin, action and details. The 'platform' field should accurately reflect the name of the store or website where the opportunity is found.
+  For EACH opportunity found, create an object with the following fields: title, platform, expiry, estimatedMargin, action, and details. The 'platform' field must accurately reflect the name of the store or website where the opportunity is found (e.g., Liverpool, Coppel, Amazon MX, etc.).
+
+  Return a complete list containing ALL the opportunities you have identified. If you find three opportunities, your output should be an array of three objects.
 
   E-commerce Data: {{{ecommerceData}}}
   `,
