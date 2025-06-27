@@ -7,7 +7,7 @@ config(); // Load environment variables from .env file
 export const ai = genkit({
   plugins: [
     googleAI({
-      apiKey: process.env.GOOGLE_API_KEY,
+      apiKey: process.env.GEMINI_API_KEY,
     }),
   ],
   model: 'googleai/gemini-2.0-flash',
