@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Hexagon, Download, Settings, Bot, Send, Image as ImageIcon, Ruler, Layers, LoaderCircle } from 'lucide-react';
 import { vectorizeImage } from '@/ai/flows/vectorize-image-flow';
 import { processUserPrompt } from '@/ai/flows/conversational-flow';
+import { useToast } from '@/hooks/use-toast';
 
 type ChatMessage = {
   role: 'user' | 'assistant';
@@ -19,6 +20,7 @@ type ChatMessage = {
 };
 
 export default function Home() {
+  const { toast } = useToast();
   const [svgResult, setSvgResult] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -33,16 +35,18 @@ export default function Home() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
-      content: '¡Hola! Describe lo que necesitas crear (ej. "un logo de un león geométrico") o sube una imagen para vectorizar.'
+      content: '¡Hola! Soy tu asistente OBN Kodex LaserAI. Pídeme un diseño (ej: "un logo de un león geométrico") o sube una imagen para vectorizar.'
     }
   ]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   }, [chatMessages, isProcessing]);
 
 
@@ -81,13 +85,22 @@ export default function Home() {
           singlePath,
         });
 
-        setSvgResult(result.svgString);
-        const assistantMessage: ChatMessage = { role: 'assistant', content: '¡Imagen vectorizada! Puedes ajustar los parámetros y volver a intentarlo, o exportarla.' };
-        setChatMessages(prev => [...prev, assistantMessage]);
+        if (result.svgString) {
+          setSvgResult(result.svgString);
+          const assistantMessage: ChatMessage = { role: 'assistant', content: '¡Imagen vectorizada! Puedes ajustar los parámetros y volver a intentarlo, o exportarla.' };
+          setChatMessages(prev => [...prev, assistantMessage]);
+        } else {
+           throw new Error('La IA no pudo generar un SVG.');
+        }
       } catch (error) {
         console.error(error);
         const errorMessage: ChatMessage = { role: 'assistant', content: 'Lo siento, ocurrió un error al vectorizar la imagen. Por favor, intenta de nuevo.' };
         setChatMessages(prev => [...prev, errorMessage]);
+        toast({
+          variant: 'destructive',
+          title: 'Error de Vectorización',
+          description: 'No se pudo procesar la imagen. Verifica que el archivo sea válido.'
+        });
       } finally {
         setIsProcessing(false);
       }
@@ -100,8 +113,8 @@ export default function Home() {
     };
   };
 
-  const handleChatSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleChatSubmit = async (e?: FormEvent) => {
+    if (e) e.preventDefault();
     if (!chatInput.trim() || isProcessing) return;
 
     const currentPrompt = chatInput;
@@ -120,13 +133,22 @@ export default function Home() {
         singlePath,
       });
 
-      setSvgResult(result.svgString);
-      const assistantMessage: ChatMessage = { role: 'assistant', content: '¡Aquí tienes tu vector! Puedes ajustar los parámetros y volver a generarlo, o exportarlo.' };
-      setChatMessages(prev => [...prev, assistantMessage]);
+      if (result.svgString) {
+        setSvgResult(result.svgString);
+        const assistantMessage: ChatMessage = { role: 'assistant', content: '¡Aquí tienes tu vector! Puedes ajustar los parámetros y volver a generarlo, o exportarlo.' };
+        setChatMessages(prev => [...prev, assistantMessage]);
+      } else {
+        throw new Error("La IA no pudo generar un SVG a partir de la descripción.")
+      }
     } catch (error) {
       console.error(error);
       const errorMessage: ChatMessage = { role: 'assistant', content: 'Lo siento, ocurrió un error al procesar tu solicitud. Por favor, intenta de nuevo.' };
       setChatMessages(prev => [...prev, errorMessage]);
+       toast({
+          variant: 'destructive',
+          title: 'Error de Generación',
+          description: 'No se pudo generar el vector a partir de tu descripción.'
+        });
     } finally {
       setIsProcessing(false);
     }
@@ -153,43 +175,44 @@ export default function Home() {
       <main className="flex-grow container mx-auto p-4 md:p-6">
         <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 h-full">
           
-          <aside className="space-y-6">
-            <Card className="flex flex-col h-[calc(100vh-150px)]">
+          <aside className="space-y-6 flex flex-col">
+            <Card className="flex flex-col flex-grow h-[calc(100vh-270px)]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Bot /> Asistente IA</CardTitle>
                 <CardDescription>Describe lo que necesitas o sube una imagen.</CardDescription>
               </CardHeader>
-              <ScrollArea className="flex-grow p-6 pt-0">
-                <div className="space-y-4">
-                  {chatMessages.map((message, index) => (
-                    <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`rounded-lg px-4 py-2 max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                        {message.content}
-                      </div>
-                    </div>
-                  ))}
-                  {isProcessing && (
-                     <div className="flex justify-start">
-                        <div className="rounded-lg px-4 py-2 max-w-[80%] bg-muted flex items-center gap-2">
-                          <LoaderCircle className="animate-spin w-4 h-4"/>
-                           Procesando...
+              <div className="flex-grow overflow-hidden">
+                <ScrollArea className="h-full" ref={chatContainerRef}>
+                  <div className="space-y-4 p-6 pt-0">
+                    {chatMessages.map((message, index) => (
+                      <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`rounded-lg px-4 py-2 max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                          {message.content}
                         </div>
-                     </div>
-                  )}
-                  <div ref={chatEndRef} />
-                </div>
-              </ScrollArea>
+                      </div>
+                    ))}
+                    {isProcessing && (
+                       <div className="flex justify-start">
+                          <div className="rounded-lg px-4 py-2 max-w-[80%] bg-muted flex items-center gap-2">
+                            <LoaderCircle className="animate-spin w-4 h-4"/>
+                             Procesando...
+                          </div>
+                       </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
               <CardFooter className="border-t p-4">
                 <form ref={formRef} onSubmit={handleChatSubmit} className="relative w-full flex items-center gap-2">
                   <Textarea
-                    placeholder="Ej: un águila con las alas abiertas"
+                    placeholder="Ej: Letras del nombre Alonzo en cursiva para corte de contorno"
                     className="pr-20"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        formRef.current?.requestSubmit();
+                        handleChatSubmit();
                       }
                     }}
                     disabled={isProcessing}
@@ -252,7 +275,7 @@ export default function Home() {
                       <p className="mt-4">La IA está trabajando...</p>
                     </div>
                   )}
-                  {!isProcessing && svgResult && (
+                  {svgResult && (
                     <div
                       className="w-full h-full p-4"
                       dangerouslySetInnerHTML={{ __html: svgResult }}
