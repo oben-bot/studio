@@ -1,18 +1,14 @@
-import { Header } from '@/components/header';
-import { OpportunityHunter } from '@/components/opportunity-hunter';
-
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <Header />
-      <main className="flex-1 container mx-auto p-4 md:p-8">
-        <OpportunityHunter />
-      </main>
-      <footer className="py-4">
-        <p className="text-center text-sm text-muted-foreground">
-          Creado con IA por Cazador de Oportunidades
+    <main className="flex min-h-screen flex-col items-center justify-center p-24">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
+          Let's build something new!
+        </h1>
+        <p className="mt-6 text-lg leading-8 text-muted-foreground">
+          I'm ready for your next idea.
         </p>
-      </footer>
-    </div>
+      </div>
+    </main>
   );
 }
