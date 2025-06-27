@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, FormEvent } from 'react';
+import { useState, useRef, FormEvent, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,12 @@ export default function Home() {
   ]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const chatScrollAreaRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, isProcessing]);
 
 
   const handleDownload = () => {
@@ -154,7 +159,7 @@ export default function Home() {
                 <CardTitle className="flex items-center gap-2"><Bot /> Asistente IA</CardTitle>
                 <CardDescription>Describe lo que necesitas o sube una imagen.</CardDescription>
               </CardHeader>
-              <ScrollArea className="flex-grow p-6 pt-0" ref={chatScrollAreaRef}>
+              <ScrollArea className="flex-grow p-6 pt-0">
                 <div className="space-y-4">
                   {chatMessages.map((message, index) => (
                     <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -171,10 +176,11 @@ export default function Home() {
                         </div>
                      </div>
                   )}
+                  <div ref={chatEndRef} />
                 </div>
               </ScrollArea>
               <CardFooter className="border-t p-4">
-                <form onSubmit={handleChatSubmit} className="relative w-full flex items-center gap-2">
+                <form ref={formRef} onSubmit={handleChatSubmit} className="relative w-full flex items-center gap-2">
                   <Textarea
                     placeholder="Ej: un águila con las alas abiertas"
                     className="pr-20"
@@ -183,7 +189,7 @@ export default function Home() {
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        handleChatSubmit(e);
+                        formRef.current?.requestSubmit();
                       }
                     }}
                     disabled={isProcessing}
