@@ -34,6 +34,7 @@ export async function vectorizeImage(input: VectorizeImageInput): Promise<Vector
 
 const prompt = ai.definePrompt({
   name: 'vectorizeImagePrompt',
+  model: 'googleai/gemini-2.5-pro',
   input: {schema: VectorizeImageInputSchema},
   output: {schema: VectorizeImageOutputSchema},
   prompt: `You are an expert in converting raster images into clean, monochrome, single-path SVG vector graphics suitable for laser cutting and engraving machines. Your task is to process the provided image and settings, and return a valid SVG string inside the 'svgString' field of a JSON object.
