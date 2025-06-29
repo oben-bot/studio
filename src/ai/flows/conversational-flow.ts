@@ -100,13 +100,23 @@ const agentFlow = ai.defineFlow(
     outputSchema: AgentFlowOutputSchema,
   },
   async (input) => {
-    const { output } = await agentPrompt(input);
+    const response = await agentPrompt(input);
 
-    if (!output) {
-      throw new Error('The AI agent returned an empty response.');
+    // The `output` property will be null if the model's response doesn't match the schema.
+    const output = response.output;
+
+    if (output) {
+      return output;
     }
-    
-    // The prompt guides the model to return the correct schema, so we just return its output.
-    return output;
+
+    // If there's no structured output, the model may have returned a simple text response.
+    // We can wrap this text in the expected output format.
+    const textResponse = response.text;
+    if (textResponse) {
+      return { textResponse: textResponse };
+    }
+
+    // If we have neither structured output nor a text response, something went wrong.
+    throw new Error('The AI agent returned an empty or unexpected response.');
   }
 );
