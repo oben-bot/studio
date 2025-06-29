@@ -37,22 +37,31 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-2.5-pro',
   input: {schema: VectorizeImageInputSchema},
   output: {schema: VectorizeImageOutputSchema},
-  prompt: `You are an expert in converting raster images into clean, monochrome, single-path SVG vector graphics suitable for laser cutting and engraving machines. Your task is to process the provided image and settings, and return a valid SVG string inside the 'svgString' field of a JSON object.
+  prompt: `You are a highly specialized AI engine that converts raster images into SVG code optimized for laser cutters. Your ONLY function is to output a JSON object containing a valid SVG string.
 
-**CRITICAL INSTRUCTIONS:**
-1.  **Output Format:** The output MUST be a JSON object with a single key "svgString". The value of this key must be a valid SVG string. Do NOT add any text, explanations, or markdown formatting around the JSON object.
-2.  **Laser Cutting Optimized:** The SVG must be simple. Use only monochrome fills (black, #000000) and no stroke. No gradients, filters, or complex effects. The goal is a clean outline or silhouette.
-3.  **ViewBox:** The generated SVG must have a viewBox attribute that matches the aspect ratio of the input image. For example, 'viewBox="0 0 400 400"'.
-4.  **Single Path:** When 'singlePath' is true, combine all elements into a single compound path if possible.
-5.  **Background Removal:** When 'removeBackground' is true, isolate the main subject and discard the background completely.
-6.  **Adhere to Settings:** Use the 'detailLevel' and 'smoothness' parameters to guide the vectorization process.
+**ABSOLUTE RULES:**
+1.  **JSON ONLY:** Your entire response MUST be a raw JSON object. NO markdown, NO explanations, NO text before or after the JSON.
+2.  **SVG CONTENT:**
+    *   The SVG MUST be monochrome (fill="#000000").
+    *   It MUST NOT have a stroke (\`stroke="none"\`).
+    *   It MUST be a single \`<path>\` element if 'singlePath' is true.
+    *   It MUST have a \`viewBox\` attribute.
+    *   The path data (\`d="..."\`) must be valid.
+3.  **NO INVALID OUTPUT:** Do not output text, invalid SVG, or anything other than the specified JSON format.
+
+**EXAMPLE OUTPUT:**
+{
+  "svgString": "<svg viewBox=\\"0 0 100 100\\" xmlns=\\"http://www.w3.org/2000/svg\\"><path fill=\\"#000000\\" stroke=\\"none\\" d=\\"M10 10 H 90 V 90 H 10 Z\\"/></svg>"
+}
+
+Now, process the following image based on the user's settings.
 
 **Image to vectorize:**
 {{media url=imageDataUri}}
 
-**Vectorization Settings:**
-- Detail Level: {{detailLevel}} (0=Less detail, 100=More detail)
-- Curve Smoothing: {{smoothness}} (0=Very angular, 100=Very smooth)
+**Settings:**
+- Detail Level: {{detailLevel}}
+- Curve Smoothing: {{smoothness}}
 - Remove Background: {{#if removeBackground}}Yes{{else}}No{{/if}}
 - Create Single Path: {{#if singlePath}}Yes{{else}}No{{/if}}
 `,
@@ -69,6 +78,12 @@ const vectorizeImageFlow = ai.defineFlow(
 
     if (!output?.svgString) {
       throw new Error('The AI failed to generate an SVG string.');
+    }
+
+    // Basic validation to prevent rendering garbage
+    if (!output.svgString.trim().startsWith('<svg')) {
+      console.error("Invalid SVG received from AI:", output.svgString);
+      throw new Error('The AI returned an invalid SVG format.');
     }
 
     return { svgString: output.svgString };
