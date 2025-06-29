@@ -67,7 +67,8 @@ const vectorizeImageFlow = ai.defineFlow(
     outputSchema: VectorizeImageOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
+    const response = await prompt(input);
+    const output = response.output;
 
     if (!output?.svgString) {
       throw new Error('The AI failed to generate an SVG string.');
@@ -75,7 +76,6 @@ const vectorizeImageFlow = ai.defineFlow(
 
     // Basic validation to prevent rendering garbage
     if (!output.svgString.trim().startsWith('<svg')) {
-      console.error("Invalid SVG received from AI:", output.svgString);
       throw new Error('The AI returned an invalid SVG format.');
     }
 
