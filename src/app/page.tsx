@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Hexagon, Download, Settings, Bot, Send, Image as ImageIcon, Ruler, Layers, LoaderCircle } from 'lucide-react';
 import { vectorizeImage } from '@/ai/flows/vectorize-image-flow';
-import { processUserPrompt } from '@/ai/flows/conversational-flow';
+import { runAgent } from '@/ai/flows/conversational-flow';
 import { useToast } from '@/hooks/use-toast';
 
 type ChatMessage = {
@@ -35,7 +35,7 @@ export default function Home() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
-      content: '¡Hola! Soy tu asistente OBN Kodex LaserAI. Pídeme un diseño (ej: "un logo de un león geométrico") o sube una imagen para vectorizar.'
+      content: '¡Hola! Soy tu asistente OBN Kodex LaserAI. Pídeme un diseño (ej: "un logo de un león geométrico") o hazme una pregunta.'
     }
   ]);
 
@@ -125,7 +125,7 @@ export default function Home() {
     setSvgResult(null);
 
     try {
-      const result = await processUserPrompt({
+      const result = await runAgent({
         prompt: currentPrompt,
         detailLevel: detailLevel[0],
         smoothness: smoothness[0],
@@ -137,8 +137,11 @@ export default function Home() {
         setSvgResult(result.svgString);
         const assistantMessage: ChatMessage = { role: 'assistant', content: '¡Aquí tienes tu vector! Puedes ajustar los parámetros y volver a generarlo, o exportarlo.' };
         setChatMessages(prev => [...prev, assistantMessage]);
+      } else if (result.textResponse) {
+        const assistantMessage: ChatMessage = { role: 'assistant', content: result.textResponse };
+        setChatMessages(prev => [...prev, assistantMessage]);
       } else {
-        throw new Error("La IA no pudo generar un SVG a partir de la descripción.")
+        throw new Error("El agente no devolvió una respuesta válida.")
       }
     } catch (error) {
       console.error(error);
@@ -147,7 +150,7 @@ export default function Home() {
        toast({
           variant: 'destructive',
           title: 'Error de Generación',
-          description: 'No se pudo generar el vector a partir de tu descripción.'
+          description: 'No se pudo procesar tu solicitud. Revisa la consola para más detalles.'
         });
     } finally {
       setIsProcessing(false);
@@ -179,7 +182,7 @@ export default function Home() {
             <Card className="flex flex-col flex-grow h-[calc(100vh-270px)]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Bot /> Asistente IA</CardTitle>
-                <CardDescription>Describe lo que necesitas o sube una imagen.</CardDescription>
+                <CardDescription>Describe un diseño o haz una pregunta.</CardDescription>
               </CardHeader>
               <div className="flex-grow overflow-hidden">
                 <ScrollArea className="h-full" ref={chatContainerRef}>
@@ -205,7 +208,7 @@ export default function Home() {
               <CardFooter className="border-t p-4">
                 <form ref={formRef} onSubmit={handleChatSubmit} className="relative w-full flex items-center gap-2">
                   <Textarea
-                    placeholder="Ej: Letras del nombre Alonzo en cursiva para corte de contorno"
+                    placeholder="Ej: Un logo de un león geométrico"
                     className="pr-20"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
