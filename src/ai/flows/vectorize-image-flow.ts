@@ -37,29 +37,22 @@ const prompt = ai.definePrompt({
   model: 'googleai/gemini-2.5-pro',
   input: {schema: VectorizeImageInputSchema},
   output: {schema: VectorizeImageOutputSchema},
-  prompt: `You are a highly specialized AI engine that converts raster images into SVG code optimized for laser cutters. Your ONLY function is to output a JSON object containing a valid SVG string.
+  prompt: `You are a highly specialized AI engine that converts raster images into SVG code optimized for laser cutters.
+Your output MUST be a JSON object containing the SVG string.
 
-**ABSOLUTE RULES:**
-1.  **JSON ONLY:** Your entire response MUST be a raw JSON object. NO markdown, NO explanations, NO text before or after the JSON.
-2.  **SVG CONTENT:**
-    *   The SVG MUST be monochrome (fill="#000000").
-    *   It MUST NOT have a stroke (\`stroke="none"\`).
-    *   It MUST be a single \`<path>\` element if 'singlePath' is true.
-    *   It MUST have a \`viewBox\` attribute.
-    *   The path data (\`d="..."\`) must be valid.
-3.  **NO INVALID OUTPUT:** Do not output text, invalid SVG, or anything other than the specified JSON format.
+Follow these rules for the SVG content:
+- The SVG MUST be monochrome (fill="#000000" on all path elements).
+- It MUST NOT have a stroke on any path element (\`stroke="none"\`).
+- It MUST be a single \`<path>\` element inside the \`<svg>\` tag if 'singlePath' is true.
+- The \`<svg>\` tag MUST have a \`viewBox\` attribute.
+- The SVG code must be valid and well-formed. Do not include any text elements, comments, or other colors.
 
-**EXAMPLE OUTPUT:**
-{
-  "svgString": "<svg viewBox=\\"0 0 100 100\\" xmlns=\\"http://www.w3.org/2000/svg\\"><path fill=\\"#000000\\" stroke=\\"none\\" d=\\"M10 10 H 90 V 90 H 10 Z\\"/></svg>"
-}
+Process the following image based on the user's settings.
 
-Now, process the following image based on the user's settings.
-
-**Image to vectorize:**
+Image to vectorize:
 {{media url=imageDataUri}}
 
-**Settings:**
+Settings:
 - Detail Level: {{detailLevel}}
 - Curve Smoothing: {{smoothness}}
 - Remove Background: {{#if removeBackground}}Yes{{else}}No{{/if}}

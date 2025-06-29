@@ -40,7 +40,7 @@ const conversationalFlow = ai.defineFlow(
     // Step 1: Generate a raster image from the text prompt.
     const { media } = await ai.generate({
       model: 'googleai/gemini-2.0-flash-preview-image-generation',
-      prompt: `Generate a clean, high-contrast, black and white image suitable for vectorization and laser cutting, based on the following description: "${input.prompt}". The main subject should be clearly defined against a plain white background.`,
+      prompt: `Generate a clean, high-contrast, black-on-white line art image suitable for vectorization and laser cutting, based on the following description: "${input.prompt}". The image should look like a silhouette or a stencil, with only pure black and pure white pixels. The main subject should be clearly defined against a plain white background.`,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
