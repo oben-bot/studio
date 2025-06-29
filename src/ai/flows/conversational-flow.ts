@@ -39,7 +39,7 @@ const createVectorImageTool = ai.defineTool(
     name: 'createVectorImage',
     description: "Creates a vector image (SVG) from a user's text description. Use this tool whenever the user asks to generate, create, design, or draw a logo, silhouette, icon, vector, or any other graphic.",
     inputSchema: AgentFlowInputSchema.pick({ prompt: true, detailLevel: true, smoothness: true, removeBackground: true, singlePath: true }),
-    outputSchema: z.string().describe('The vectorized image as a valid, well-formed SVG string.'),
+    outputSchema: z.string().describe('The raw SVG string of the vectorized image.'),
   },
   async (input) => {
     // Step 1: Generate a raster image from the text prompt.
@@ -70,6 +70,7 @@ const createVectorImageTool = ai.defineTool(
       throw new Error('Failed to vectorize the generated image.');
     }
     
+    // The tool's job is to return the raw SVG string.
     return vectorizationResult.svgString;
   }
 );
@@ -79,15 +80,12 @@ const agentPrompt = ai.definePrompt({
   name: 'laserAiAgentPrompt',
   tools: [createVectorImageTool],
   input: { schema: AgentFlowInputSchema },
-  output: { schema: AgentFlowOutputSchema },
+  // NO output schema. Let the model return raw text or a tool call.
+  // The agentFlow will handle formatting the final response.
   system: `You are OBN Kodex LaserAI, a friendly and helpful assistant for laser cutting and engraving designs.
-Your primary function is to help users create vector images (SVGs).
-
-- If the user asks you to create, draw, or generate a design, logo, icon, or any visual, you MUST use the \`createVectorImage\` tool. Pass the user's description as the 'prompt' parameter and include the other settings.
-- After the tool runs and you receive the SVG string as a result, your final response MUST be a JSON object with the \`svgString\` field populated with that result.
-- If the user asks a general question (e.g., "hello", "how are you?", "what can you do?"), your final response must be a JSON object with the 'textResponse' field populated with your helpful, concise answer.
-- If the tool fails, provide a helpful error message in the 'textResponse' field.
-- Keep your text responses short, friendly, and in Spanish.
+- If the user asks you to create, draw, or generate a design, logo, icon, or any visual, you MUST use the \`createVectorImage\` tool.
+- After the tool runs, your only job is to output the raw SVG string that the tool provides. Do NOT add any other text or formatting.
+- If the user is just asking a question or having a conversation, provide a helpful, concise answer in Spanish.
 `
 });
 
@@ -101,22 +99,19 @@ const agentFlow = ai.defineFlow(
   },
   async (input) => {
     const response = await agentPrompt(input);
+    const responseText = response.text;
 
-    // The `output` property will be null if the model's response doesn't match the schema.
-    const output = response.output;
-
-    if (output) {
-      return output;
+    if (!responseText) {
+      throw new Error('The AI agent returned an empty response.');
     }
 
-    // If there's no structured output, the model may have returned a simple text response.
-    // We can wrap this text in the expected output format.
-    const textResponse = response.text;
-    if (textResponse) {
-      return { textResponse: textResponse };
+    // Check if the response looks like an SVG. If so, that's our result.
+    // The model was instructed to output the raw SVG from the tool.
+    if (responseText.trim().startsWith('<svg')) {
+      return { svgString: responseText };
+    } else {
+      // Otherwise, it's a conversational response.
+      return { textResponse: responseText };
     }
-
-    // If we have neither structured output nor a text response, something went wrong.
-    throw new Error('The AI agent returned an empty or unexpected response.');
   }
 );
