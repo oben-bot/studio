@@ -9,14 +9,88 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Hexagon, Download, Settings, Bot, Send, Image as ImageIcon, Ruler, Layers, LoaderCircle } from 'lucide-react';
+import { Hexagon, Download, Settings, Bot, Send, Image as ImageIcon, Ruler as RulerIcon, Layers, LoaderCircle } from 'lucide-react';
 import { vectorizeImage } from '@/ai/flows/vectorize-image-flow';
 import { runAgent } from '@/ai/flows/conversational-flow';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
+};
+
+const Ruler = ({ orientation = 'horizontal' }: { orientation?: 'horizontal' | 'vertical' }) => {
+  const [size, setSize] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver(entries => {
+      if (entries[0]) {
+        const { width, height } = entries[0].contentRect;
+        setSize(orientation === 'horizontal' ? width : height);
+      }
+    });
+
+    const currentRef = ref.current;
+    if (currentRef) {
+      resizeObserver.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        resizeObserver.unobserve(currentRef);
+      }
+      resizeObserver.disconnect();
+    };
+  }, [orientation]);
+
+  const renderTicks = () => {
+    const ticks = [];
+    const interval = 50;
+    if (size === 0) return null;
+
+    const numTicks = Math.floor(size / interval);
+
+    for (let i = 0; i <= numTicks; i++) {
+      const position = i * interval;
+      const isMajorTick = i % 2 === 0 && i > 0;
+      
+      ticks.push(
+        <div
+          key={i}
+          className="absolute"
+          style={orientation === 'horizontal' ? { left: `${position}px` } : { top: `${position}px` }}
+        >
+          <div
+            className={cn(
+              "bg-muted-foreground",
+              orientation === 'horizontal' ? (isMajorTick ? 'h-3 w-px' : 'h-2 w-px') : (isMajorTick ? 'w-3 h-px' : 'w-2 h-px')
+            )}
+          />
+          {isMajorTick && (
+            <span
+              className="absolute text-muted-foreground text-[10px] select-none"
+              style={
+                orientation === 'horizontal'
+                  ? { transform: 'translateX(-50%)', top: '12px' }
+                  : { transform: 'translateY(-50%)', left: '12px' }
+              }
+            >
+              {position}
+            </span>
+          )}
+        </div>
+      );
+    }
+    return ticks;
+  };
+
+  return (
+    <div ref={ref} className="relative w-full h-full">
+      {renderTicks()}
+    </div>
+  );
 };
 
 export default function Home() {
@@ -249,7 +323,7 @@ export default function Home() {
                   <Slider value={detailLevel} onValueChange={setDetailLevel} max={100} step={1} id="detail" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="smoothness" className="flex items-center gap-2"><Ruler/> Suavizado de Curvas</Label>
+                  <Label htmlFor="smoothness" className="flex items-center gap-2"><RulerIcon/> Suavizado de Curvas</Label>
                   <Slider value={smoothness} onValueChange={setSmoothness} max={100} step={1} id="smoothness" />
                 </div>
                 <div className="flex items-center justify-between">
@@ -268,28 +342,46 @@ export default function Home() {
             <Card className="h-full flex flex-col">
               <CardHeader>
                 <CardTitle>Lienzo de Trabajo</CardTitle>
-                <CardDescription>Aquí verás el resultado de tu vectorización.</CardDescription>
+                <CardDescription>Aquí verás el resultado de tu vectorización. Las medidas se muestran en la regla (px).</CardDescription>
               </CardHeader>
-              <CardContent className="flex-grow pb-6">
-                <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center border-2 border-dashed">
-                  {isProcessing && !svgResult && (
-                    <div className="text-center text-muted-foreground flex flex-col items-center gap-4">
-                      <LoaderCircle className="w-16 h-16 animate-spin" />
-                      <p className="mt-4">La IA está trabajando...</p>
-                    </div>
-                  )}
-                  {svgResult && (
-                    <div
-                      className="w-full h-full p-4"
-                      dangerouslySetInnerHTML={{ __html: svgResult }}
-                    />
-                  )}
-                  {!isProcessing && !svgResult && (
-                    <div className="text-center text-muted-foreground">
-                      <Hexagon className="mx-auto h-16 w-16" />
-                      <p className="mt-4">El resultado aparecerá aquí</p>
-                    </div>
-                  )}
+              <CardContent className="flex-grow p-0 overflow-hidden">
+                <div className="grid grid-cols-[32px_1fr] grid-rows-[32px_1fr] w-full h-full">
+                  {/* Corner */}
+                  <div className="border-r border-b border-border"></div>
+
+                  {/* Horizontal Ruler */}
+                  <div className="relative border-b border-border">
+                     <Ruler orientation="horizontal" />
+                  </div>
+
+                  {/* Vertical Ruler */}
+                  <div className="relative border-r border-border">
+                     <Ruler orientation="vertical" />
+                  </div>
+
+                  {/* Canvas */}
+                  <div className="bg-muted relative overflow-auto">
+                      <div className="w-full h-full flex items-center justify-center p-4">
+                        {isProcessing && !svgResult && (
+                          <div className="text-center text-muted-foreground flex flex-col items-center gap-4">
+                            <LoaderCircle className="w-16 h-16 animate-spin" />
+                            <p className="mt-4">La IA está trabajando...</p>
+                          </div>
+                        )}
+                        {svgResult && (
+                          <div
+                            className="w-full h-full p-8 bg-white"
+                            dangerouslySetInnerHTML={{ __html: svgResult }}
+                          />
+                        )}
+                        {!isProcessing && !svgResult && (
+                          <div className="text-center text-muted-foreground p-4">
+                            <Hexagon className="mx-auto h-16 w-16" />
+                            <p className="mt-4">El resultado aparecerá aquí</p>
+                          </div>
+                        )}
+                      </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
