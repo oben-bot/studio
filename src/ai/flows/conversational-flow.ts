@@ -80,11 +80,10 @@ const agentPrompt = ai.definePrompt({
   name: 'laserAiAgentPrompt',
   tools: [createVectorImageTool],
   input: { schema: AgentFlowInputSchema },
-  // NO output schema. Let the model return raw text or a tool call.
-  // The agentFlow will handle formatting the final response.
+  // Let the model decide whether to return text or a tool call.
   system: `You are OBN Kodex LaserAI, a friendly and helpful assistant for laser cutting and engraving designs.
 - If the user asks you to create, draw, or generate a design, logo, icon, or any visual, you MUST use the \`createVectorImage\` tool.
-- After the tool runs, your only job is to output the raw SVG string that the tool provides. Do NOT add any other text or formatting.
+- After the tool runs successfully, provide a brief confirmation message in Spanish, like "¡Claro! Aquí está tu diseño."
 - If the user is just asking a question or having a conversation, provide a helpful, concise answer in Spanish.
 `
 });
@@ -99,19 +98,31 @@ const agentFlow = ai.defineFlow(
   },
   async (input) => {
     const response = await agentPrompt(input);
-    const responseText = response.text;
+    let svgString: string | undefined;
 
-    if (!responseText) {
-      throw new Error('The AI agent returned an empty response.');
+    // Look for a tool response in the history.
+    if (response.history) {
+      for (const message of response.history.slice().reverse()) {
+        for (const part of message.content) {
+          if (part.toolResponse) {
+            // The tool's outputSchema is z.string(), so the content is a string.
+            svgString = part.toolResponse.content as string;
+            break; // Found the tool response, no need to look further
+          }
+        }
+        if (svgString) break;
+      }
     }
 
-    // Check if the response looks like an SVG. If so, that's our result.
-    // The model was instructed to output the raw SVG from the tool.
-    if (responseText.trim().startsWith('<svg')) {
-      return { svgString: responseText };
-    } else {
-      // Otherwise, it's a conversational response.
-      return { textResponse: responseText };
+    const textResponse = response.text;
+
+    if (!svgString && !textResponse) {
+        throw new Error('The AI agent returned an empty or unexpected response.');
     }
+
+    return {
+        svgString,
+        textResponse,
+    };
   }
 );

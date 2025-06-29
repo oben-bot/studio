@@ -207,16 +207,22 @@ export default function Home() {
         singlePath,
       });
 
-      if (result.svgString) {
-        setSvgResult(result.svgString);
-        const assistantMessage: ChatMessage = { role: 'assistant', content: '¡Aquí tienes tu vector! Puedes ajustar los parámetros y volver a generarlo, o exportarlo.' };
-        setChatMessages(prev => [...prev, assistantMessage]);
-      } else if (result.textResponse) {
+      // Always display the text response in chat if it exists.
+      if (result.textResponse) {
         const assistantMessage: ChatMessage = { role: 'assistant', content: result.textResponse };
         setChatMessages(prev => [...prev, assistantMessage]);
-      } else {
+      }
+
+      // If an SVG was generated, display it on the canvas.
+      if (result.svgString) {
+        setSvgResult(result.svgString);
+      }
+      
+      // If nothing came back (which the flow should prevent, but as a safeguard).
+      if (!result.textResponse && !result.svgString) {
         throw new Error("El agente no devolvió una respuesta válida.")
       }
+
     } catch (error) {
       console.error(error);
       const errorMessage: ChatMessage = { role: 'assistant', content: 'Lo siento, ocurrió un error al procesar tu solicitud. Por favor, intenta de nuevo.' };
