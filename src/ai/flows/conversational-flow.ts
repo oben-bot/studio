@@ -12,7 +12,7 @@ import {z} from 'genkit';
 import { vectorizeImage, VectorizeImageInput } from './vectorize-image-flow';
 
 // Input schema for the main agent flow
-export const AgentFlowInputSchema = z.object({
+const AgentFlowInputSchema = z.object({
   prompt: z.string().describe("The user's message from the chat."),
   detailLevel: z.number().min(0).max(100),
   smoothness: z.number().min(0).max(100),
@@ -22,7 +22,7 @@ export const AgentFlowInputSchema = z.object({
 export type AgentFlowInput = z.infer<typeof AgentFlowInputSchema>;
 
 // Output schema for the main agent flow
-export const AgentFlowOutputSchema = z.object({
+const AgentFlowOutputSchema = z.object({
   textResponse: z.string().optional().describe('A text-based response to the user.'),
   svgString: z.string().optional().describe('The vectorized image as a valid, well-formed SVG string, if one was generated.'),
 });
