@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, FormEvent, useEffect } from 'react';
@@ -9,7 +10,12 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Hexagon, Download, Settings, Bot, Send, Image as ImageIcon, Ruler as RulerIcon, Layers, LoaderCircle } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Hexagon, Download, Settings, Bot, Send, Image as ImageIcon, Ruler as RulerIcon, Layers, LoaderCircle,
+  Scissors, Combine, Paintbrush, Box, Type, Shapes, Pencil, UploadCloud, Rocket
+} from 'lucide-react';
 import { vectorizeImage } from '@/ai/flows/vectorize-image-flow';
 import { runAgent } from '@/ai/flows/conversational-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +25,11 @@ type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
 };
+
+type UiMode = 'setup' | 'chat';
+type WorkType = 'corte' | 'corte-grabado' | 'grabado' | '3d';
+type CorteSubType = 'nombre' | 'figura' | 'contorno' | 'forma';
+type ThreeDSubType = 'nuevo' | 'existente';
 
 const Ruler = ({ orientation = 'horizontal' }: { orientation?: 'horizontal' | 'vertical' }) => {
   const [size, setSize] = useState(0);
@@ -104,24 +115,26 @@ export default function Home() {
   const [removeBackground, setRemoveBackground] = useState(true);
   const [singlePath, setSinglePath] = useState(true);
 
+  // States for UI mode and workflow
+  const [mode, setMode] = useState<UiMode>('setup');
+  const [workType, setWorkType] = useState<WorkType | ''>('');
+  const [corteSubType, setCorteSubType] = useState<CorteSubType | ''>('');
+  const [threeDSubType, setThreeDSubType] = useState<ThreeDSubType | ''>('');
+  const [textInput, setTextInput] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   // States for chat
   const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      content: '¡Hola! Soy tu asistente OBN Kodex LaserAI. Pídeme un diseño (ej: "un logo de un león geométrico") o hazme una pregunta.'
-    }
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (chatContainerRef.current) {
+    if (mode === 'chat' && chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [chatMessages, isProcessing]);
+  }, [chatMessages, isProcessing, mode]);
 
 
   const handleDownload = () => {
@@ -137,14 +150,15 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
   
-  const handleFileUpload = async (file: File) => {
+  const processImageFile = async (file: File) => {
     if (!file || isProcessing) return;
-
+    
     setIsProcessing(true);
     setSvgResult(null);
 
     const userMessage: ChatMessage = { role: 'user', content: `Vectorizando la imagen: ${file.name}` };
     setChatMessages(prev => [...prev, userMessage]);
+    setMode('chat'); // Switch to chat mode
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -161,22 +175,19 @@ export default function Home() {
 
         if (result.svgString) {
           setSvgResult(result.svgString);
-          const assistantMessage: ChatMessage = { role: 'assistant', content: '¡Imagen vectorizada! Puedes ajustar los parámetros y volver a intentarlo, o exportarla.' };
+          const assistantMessage: ChatMessage = { role: 'assistant', content: '¡Imagen vectorizada! Puedes usar el chat para pedir ajustes, o exportarla.' };
           setChatMessages(prev => [...prev, assistantMessage]);
         } else {
            throw new Error('La IA no pudo generar un SVG.');
         }
       } catch (error) {
         console.error(error);
-        const errorMessage: ChatMessage = { role: 'assistant', content: 'Lo siento, ocurrió un error al vectorizar la imagen. Por favor, intenta de nuevo.' };
+        const errorMessage: ChatMessage = { role: 'assistant', content: 'Lo siento, ocurrió un error al vectorizar la imagen.' };
         setChatMessages(prev => [...prev, errorMessage]);
-        toast({
-          variant: 'destructive',
-          title: 'Error de Vectorización',
-          description: 'No se pudo procesar la imagen. Verifica que el archivo sea válido.'
-        });
+        toast({ variant: 'destructive', title: 'Error de Vectorización' });
       } finally {
         setIsProcessing(false);
+        setSelectedFile(null);
       }
     };
      reader.onerror = (error) => {
@@ -184,8 +195,50 @@ export default function Home() {
       const errorMessage = { role: 'assistant', content: 'Ocurrió un error al leer el archivo.' };
       setChatMessages(prev => [...prev, errorMessage]);
       setIsProcessing(false);
+      setSelectedFile(null);
     };
   };
+
+  const processTextPrompt = async (prompt: string) => {
+    if (!prompt.trim() || isProcessing) return;
+
+    setIsProcessing(true);
+    setSvgResult(null);
+    
+    const userMessage: ChatMessage = { role: 'user', content: prompt };
+    setChatMessages([userMessage]); // Start a new conversation
+    setMode('chat'); // Switch to chat mode
+
+    try {
+      const result = await runAgent({
+        prompt: prompt,
+        detailLevel: detailLevel[0],
+        smoothness: smoothness[0],
+        removeBackground,
+        singlePath,
+      });
+
+      if (result.textResponse) {
+        const assistantMessage: ChatMessage = { role: 'assistant', content: result.textResponse };
+        setChatMessages(prev => [...prev, assistantMessage]);
+      }
+      if (result.svgString) {
+        setSvgResult(result.svgString);
+      }
+      if (!result.textResponse && !result.svgString) {
+        throw new Error("El agente no devolvió una respuesta válida.")
+      }
+
+    } catch (error) {
+      console.error(error);
+      const errorMessage: ChatMessage = { role: 'assistant', content: 'Lo siento, ocurrió un error.' };
+      setChatMessages(prev => [...prev, errorMessage]);
+      toast({ variant: 'destructive', title: 'Error de Generación' });
+    } finally {
+      setIsProcessing(false);
+      setTextInput('');
+    }
+  }
 
   const handleChatSubmit = async (e?: FormEvent) => {
     if (e) e.preventDefault();
@@ -196,8 +249,8 @@ export default function Home() {
     setChatMessages(prev => [...prev, userMessage]);
     setChatInput('');
     setIsProcessing(true);
-    setSvgResult(null);
-
+    // Do not clear svgResult, to allow for modifications
+    
     try {
       const result = await runAgent({
         prompt: currentPrompt,
@@ -207,36 +260,76 @@ export default function Home() {
         singlePath,
       });
 
-      // Always display the text response in chat if it exists.
       if (result.textResponse) {
         const assistantMessage: ChatMessage = { role: 'assistant', content: result.textResponse };
         setChatMessages(prev => [...prev, assistantMessage]);
       }
-
-      // If an SVG was generated, display it on the canvas.
       if (result.svgString) {
         setSvgResult(result.svgString);
-      }
-      
-      // If nothing came back (which the flow should prevent, but as a safeguard).
-      if (!result.textResponse && !result.svgString) {
-        throw new Error("El agente no devolvió una respuesta válida.")
       }
 
     } catch (error) {
       console.error(error);
-      const errorMessage: ChatMessage = { role: 'assistant', content: 'Lo siento, ocurrió un error al procesar tu solicitud. Por favor, intenta de nuevo.' };
+      const errorMessage: ChatMessage = { role: 'assistant', content: 'Lo siento, un error ocurrió.' };
       setChatMessages(prev => [...prev, errorMessage]);
-       toast({
-          variant: 'destructive',
-          title: 'Error de Generación',
-          description: 'No se pudo procesar tu solicitud. Revisa la consola para más detalles.'
-        });
+      toast({ variant: 'destructive', title: 'Error del Asistente' });
     } finally {
       setIsProcessing(false);
     }
   };
 
+  const handleSetupGenerate = () => {
+    if (selectedFile) {
+        processImageFile(selectedFile);
+        return;
+    }
+
+    let prompt = '';
+    if (workType === 'corte') {
+        if (corteSubType === 'nombre') prompt = `Genera un diseño del nombre "${textInput}" para corte láser, con un estilo claro y unible.`;
+        else if (corteSubType === 'figura') prompt = `Genera una figura simple de ${textInput} para corte láser, como una silueta o esténcil.`;
+        else if (corteSubType === 'contorno') prompt = `Genera solo el contorno de ${textInput} para corte láser.`;
+        else if (corteSubType === 'forma') prompt = `Genera una forma abstracta basada en "${textInput}" para corte láser.`;
+        else prompt = `Genera un diseño de "${textInput}" para corte láser.`;
+    } else if (workType === 'corte-grabado') {
+        prompt = `Genera un diseño de "${textInput}" para corte y grabado láser, con áreas bien definidas para cada proceso.`;
+    } else if (workType === 'grabado') {
+        prompt = `Genera un diseño detallado de "${textInput}" para grabado láser.`;
+    } else if (workType === '3d' && threeDSubType === 'nuevo') {
+        prompt = `Genera un diseño de ${textInput} que simule un efecto 3D en capas para corte láser.`;
+    }
+    
+    if (prompt) {
+        processTextPrompt(prompt);
+    }
+  };
+
+  const isSetupComplete = () => {
+    if (!workType) return false;
+    if (workType === 'corte' && !corteSubType) return false;
+    if (workType === '3d' && !threeDSubType) return false;
+
+    if (workType === '3d' && threeDSubType === 'existente') {
+        return !!selectedFile;
+    }
+    
+    if (textInput.trim() || selectedFile) {
+        return true;
+    }
+    
+    return false;
+  }
+
+  const resetWorkflow = () => {
+    setMode('setup');
+    setWorkType('');
+    setCorteSubType('');
+    setThreeDSubType('');
+    setTextInput('');
+    setSelectedFile(null);
+    setSvgResult(null);
+    setChatMessages([]);
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -251,6 +344,7 @@ export default function Home() {
               <Download className="mr-2" />
               Exportar SVG
             </Button>
+            {mode === 'chat' && <Button variant="outline" onClick={resetWorkflow}>Nuevo Diseño</Button>}
           </div>
         </div>
       </header>
@@ -259,65 +353,156 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 h-full">
           
           <aside className="space-y-6 flex flex-col">
-            <Card className="flex flex-col flex-grow h-[calc(100vh-270px)]">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Bot /> Asistente IA</CardTitle>
-                <CardDescription>Describe un diseño o haz una pregunta.</CardDescription>
-              </CardHeader>
-              <div className="flex-grow overflow-hidden">
-                <ScrollArea className="h-full" ref={chatContainerRef}>
-                  <div className="space-y-4 p-6 pt-0">
-                    {chatMessages.map((message, index) => (
-                      <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`rounded-lg px-4 py-2 max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                          {message.content}
-                        </div>
-                      </div>
-                    ))}
-                    {isProcessing && (
-                       <div className="flex justify-start">
-                          <div className="rounded-lg px-4 py-2 max-w-[80%] bg-muted flex items-center gap-2">
-                            <LoaderCircle className="animate-spin w-4 h-4"/>
-                             Procesando...
-                          </div>
-                       </div>
+            {mode === 'setup' ? (
+                // SETUP WIZARD
+                <div className='flex flex-col gap-4'>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>1. Elige el tipo de trabajo</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <RadioGroup value={workType} onValueChange={(val) => setWorkType(val as WorkType)}>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Label htmlFor="corte" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
+                                        <RadioGroupItem value="corte" id="corte" className="sr-only"/>
+                                        <Scissors className="mb-2"/> <span className="font-semibold">Corte</span>
+                                    </Label>
+                                    <Label htmlFor="corte-grabado" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
+                                        <RadioGroupItem value="corte-grabado" id="corte-grabado" className="sr-only"/>
+                                        <Combine className="mb-2"/> <span className="font-semibold">Corte y Grabado</span>
+                                    </Label>
+                                    <Label htmlFor="grabado" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
+                                        <RadioGroupItem value="grabado" id="grabado" className="sr-only"/>
+                                        <Paintbrush className="mb-2"/> <span className="font-semibold">Grabado</span>
+                                    </Label>
+                                    <Label htmlFor="3d" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
+                                        <RadioGroupItem value="3d" id="3d" className="sr-only"/>
+                                        <Box className="mb-2"/> <span className="font-semibold">3D</span>
+                                    </Label>
+                                </div>
+                            </RadioGroup>
+                        </CardContent>
+                    </Card>
+
+                    {workType === 'corte' && (
+                        <Card>
+                            <CardHeader><CardTitle>2. Especifica el tipo de corte</CardTitle></CardHeader>
+                            <CardContent>
+                                <RadioGroup value={corteSubType} onValueChange={(val) => setCorteSubType(val as CorteSubType)}>
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2 p-3 border rounded-md"><RadioGroupItem value="nombre" /> <Type className="w-4 h-4"/> Nombre</Label>
+                                    <Label className="flex items-center gap-2 p-3 border rounded-md"><RadioGroupItem value="figura" /> <Shapes className="w-4 h-4"/> Figura</Label>
+                                    <Label className="flex items-center gap-2 p-3 border rounded-md"><RadioGroupItem value="contorno" /> <Pencil className="w-4 h-4"/> Contorno</Label>
+                                    <Label className="flex items-center gap-2 p-3 border rounded-md"><RadioGroupItem value="forma" /> <Hexagon className="w-4 h-4"/> Forma</Label>
+                                </div>
+                                </RadioGroup>
+                            </CardContent>
+                        </Card>
                     )}
-                  </div>
-                </ScrollArea>
-              </div>
-              <CardFooter className="border-t p-4">
-                <form ref={formRef} onSubmit={handleChatSubmit} className="relative w-full flex items-center gap-2">
-                  <Textarea
-                    placeholder="Ej: Un logo de un león geométrico"
-                    className="pr-20"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleChatSubmit();
-                      }
-                    }}
-                    disabled={isProcessing}
-                  />
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
-                    accept="image/png, image/jpeg, image/webp"
-                    onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
-                  />
-                  <Button type="button" size="icon" variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={isProcessing}>
-                    <ImageIcon />
-                    <span className="sr-only">Subir Imagen</span>
-                  </Button>
-                  <Button type="submit" size="icon" disabled={isProcessing || !chatInput.trim()}>
-                    <Send />
-                    <span className="sr-only">Enviar</span>
-                  </Button>
-                </form>
-              </CardFooter>
-            </Card>
+
+                    {workType === '3d' && (
+                        <Card>
+                             <CardHeader><CardTitle>2. ¿Diseño nuevo o existente?</CardTitle></CardHeader>
+                             <CardContent>
+                                 <RadioGroup value={threeDSubType} onValueChange={(val) => setThreeDSubType(val as ThreeDSubType)}>
+                                    <div className="space-y-2">
+                                        <Label className="flex items-center gap-2 p-3 border rounded-md"><RadioGroupItem value="nuevo"/> <Pencil className="w-4 h-4"/> Diseño Nuevo</Label>
+                                        <Label className="flex items-center gap-2 p-3 border rounded-md"><RadioGroupItem value="existente"/> <FileImage className="w-4 h-4"/> Diseño Existente</Label>
+                                    </div>
+                                 </RadioGroup>
+                             </CardContent>
+                        </Card>
+                    )}
+
+                    {workType && ( (workType !== 'corte' && workType !== '3d') || (workType === 'corte' && corteSubType) || (workType === '3d' && threeDSubType)) && (
+                        <Card>
+                            <CardHeader><CardTitle>3. Proporciona tu idea</CardTitle></CardHeader>
+                            <CardContent className="space-y-4">
+                                { !(workType === '3d' && threeDSubType === 'existente') && (
+                                    <div>
+                                        <Label htmlFor="text-prompt" className="mb-2 block">Describe tu idea o escribe el texto a usar</Label>
+                                        <Input id="text-prompt" placeholder="Ej: un león geométrico, el nombre 'Sofía'..." value={textInput} onChange={e => setTextInput(e.target.value)} />
+                                    </div>
+                                )}
+                                { !(workType === 'corte' && corteSubType === 'nombre') && !(workType === '3d' && threeDSubType === 'nuevo') && (
+                                   <>
+                                     <div className="relative">
+                                         <Separator />
+                                         <span className="absolute left-1/2 -translate-x-1/2 -top-2 bg-background px-2 text-sm text-muted-foreground">O</span>
+                                     </div>
+                                     <input 
+                                       type="file" 
+                                       ref={fileInputRef} 
+                                       className="hidden" 
+                                       accept="image/png, image/jpeg, image/webp"
+                                       onChange={(e) => e.target.files && setSelectedFile(e.target.files[0])}
+                                     />
+                                     <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()}>
+                                         <UploadCloud className="mr-2"/> Subir una imagen
+                                     </Button>
+                                     {selectedFile && <p className="text-sm text-center text-muted-foreground mt-2">Archivo seleccionado: {selectedFile.name}</p>}
+                                   </>
+                                )}
+                            </CardContent>
+                             <CardFooter>
+                                <Button className="w-full" size="lg" disabled={!isSetupComplete() || isProcessing} onClick={handleSetupGenerate}>
+                                    <Rocket className="mr-2"/> Generar Diseño
+                                </Button>
+                             </CardFooter>
+                        </Card>
+                    )}
+                </div>
+            ) : (
+                // CHAT ASSISTANT
+                <Card className="flex flex-col flex-grow h-[calc(100vh-270px)]">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Bot /> Asistente IA</CardTitle>
+                        <CardDescription>Pide ajustes sobre el diseño actual.</CardDescription>
+                    </CardHeader>
+                    <div className="flex-grow overflow-hidden">
+                        <ScrollArea className="h-full" ref={chatContainerRef}>
+                        <div className="space-y-4 p-6 pt-0">
+                            {chatMessages.map((message, index) => (
+                            <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`rounded-lg px-4 py-2 max-w-[80%] ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                {message.content}
+                                </div>
+                            </div>
+                            ))}
+                            {isProcessing && (
+                            <div className="flex justify-start">
+                                <div className="rounded-lg px-4 py-2 max-w-[80%] bg-muted flex items-center gap-2">
+                                    <LoaderCircle className="animate-spin w-4 h-4"/>
+                                    Procesando...
+                                </div>
+                            </div>
+                            )}
+                        </div>
+                        </ScrollArea>
+                    </div>
+                    <CardFooter className="border-t p-4">
+                        <form onSubmit={handleChatSubmit} className="relative w-full flex items-center gap-2">
+                        <Textarea
+                            placeholder="Ej: hazlo más grueso, con estilo gótico..."
+                            className="pr-12"
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleChatSubmit();
+                            }
+                            }}
+                            disabled={isProcessing}
+                        />
+                        <Button type="submit" size="icon" className="absolute right-2" disabled={isProcessing || !chatInput.trim()}>
+                            <Send />
+                            <span className="sr-only">Enviar</span>
+                        </Button>
+                        </form>
+                    </CardFooter>
+                </Card>
+            )}
 
             <Card>
               <CardHeader>
@@ -352,20 +537,13 @@ export default function Home() {
               </CardHeader>
               <CardContent className="flex-grow p-0 overflow-hidden">
                 <div className="grid grid-cols-[32px_1fr] grid-rows-[32px_1fr] w-full h-full">
-                  {/* Corner */}
                   <div className="border-r border-b border-border"></div>
-
-                  {/* Horizontal Ruler */}
                   <div className="relative border-b border-border">
                      <Ruler orientation="horizontal" />
                   </div>
-
-                  {/* Vertical Ruler */}
                   <div className="relative border-r border-border">
                      <Ruler orientation="vertical" />
                   </div>
-
-                  {/* Canvas */}
                   <div className="bg-muted relative overflow-auto">
                       <div className="w-full h-full flex items-center justify-center p-4">
                         {isProcessing && !svgResult && (
