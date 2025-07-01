@@ -1,8 +1,9 @@
 'use server';
 /**
  * @fileOverview An intelligent agent that can chat with the user and create vector images.
+ * This file uses a robust orchestration pattern to prevent internal AI library errors.
  *
- * - runAgent - The main flow that processes user input.
+ * - runAgent - The main flow that processes user input, classifies intent, and delegates to other functions.
  * - AgentFlowInput - The input type for the runAgent function.
  * - AgentFlowOutput - The return type for the runAgent function.
  */
@@ -30,99 +31,83 @@ export type AgentFlowOutput = z.infer<typeof AgentFlowOutputSchema>;
 
 // Wrapper function to be called from the UI
 export async function runAgent(input: AgentFlowInput): Promise<AgentFlowOutput> {
-  return agentFlow(input);
+  return agentOrchestrationFlow(input);
 }
 
-// Tool definition for creating a vector image
-const createVectorImageTool = ai.defineTool(
-  {
-    name: 'createVectorImage',
-    description: "Creates a vector image (SVG) from a user's text description. Use this tool whenever the user asks to generate, create, design, or draw a logo, silhouette, icon, vector, or any other graphic.",
-    inputSchema: AgentFlowInputSchema.pick({ prompt: true, detailLevel: true, smoothness: true, removeBackground: true, singlePath: true }),
-    outputSchema: z.string().describe('The raw SVG string of the vectorized image.'),
-  },
-  async (input) => {
-    // Step 1: Generate a raster image from the text prompt.
-    const { media } = await ai.generate({
-      model: 'googleai/gemini-2.0-flash-preview-image-generation',
-      prompt: `Generate a clean, high-contrast, black-on-white line art image suitable for vectorization and laser cutting, based on the following description: "${input.prompt}". The image should look like a silhouette or a stencil, with only pure black and pure white pixels. The main subject should be clearly defined against a plain white background.`,
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'],
-      },
-    });
+// A prompt to classify user intent to avoid complex tool-use logic.
+const intentClassificationPrompt = ai.definePrompt({
+    name: 'intentClassificationPrompt',
+    input: { schema: z.object({ prompt: z.string() }) },
+    output: { schema: z.object({ intent: z.enum(['generate_design', 'chat', 'unknown']) }) },
+    system: `You are an intent classifier for a laser cutting design assistant. Classify the user's prompt into one of the following categories:
+- 'generate_design': The user wants to create, generate, draw, make, or design a visual. This includes requests for modifications that imply a new generation (e.g., "now make it a cat", "do a lion instead"). Examples: "dibuja un perro", "logo para mi empresa", "silueta de un arbol".
+- 'chat': The user is asking a question, greeting, having a general conversation, or asking to modify an existing design. Examples: "hola", "quien eres?", "puedes hacerlo mas grueso?".`,
+    prompt: `User prompt: "{{prompt}}"`
+});
 
-    if (!media || !media.url) {
-      throw new Error('AI failed to generate an image from the prompt.');
-    }
-
-    // Step 2: Vectorize the generated raster image.
-    const vectorizeInput: VectorizeImageInput = {
-        imageDataUri: media.url,
-        detailLevel: input.detailLevel,
-        smoothness: input.smoothness,
-        removeBackground: input.removeBackground,
-        singlePath: input.singlePath,
-    };
-
-    const vectorizationResult = await vectorizeImage(vectorizeInput);
-
-    if (!vectorizationResult.svgString) {
-      throw new Error('Failed to vectorize the generated image.');
-    }
-    
-    // The tool's job is to return the raw SVG string.
-    return vectorizationResult.svgString;
-  }
-);
-
-// The main agent prompt that decides whether to chat or use the tool
-const agentPrompt = ai.definePrompt({
-  name: 'laserAiAgentPrompt',
-  tools: [createVectorImageTool],
-  input: { schema: AgentFlowInputSchema },
-  // Let the model decide whether to return text or a tool call.
-  system: `You are OBN Kodex LaserAI, a friendly and helpful assistant for laser cutting and engraving designs.
-- If the user asks you to create, draw, or generate a design, logo, icon, or any visual, you MUST use the \`createVectorImage\` tool.
-- After the tool runs successfully, provide a brief confirmation message in Spanish, like "¡Claro! Aquí está tu diseño."
-- If the user is just asking a question or having a conversation, provide a helpful, concise answer in Spanish.
-`
+// A prompt for general conversation or simple modification responses.
+const chatPrompt = ai.definePrompt({
+    name: 'chatPrompt',
+    input: { schema: z.object({ prompt: z.string() }) },
+    output: { schema: z.object({ response: z.string() }) },
+    system: `You are OBN Kodex LaserAI, a friendly and helpful assistant for laser cutting and engraving designs. Provide a concise, helpful, and friendly answer to the user's message in Spanish.`,
+    prompt: `User message: "{{prompt}}"`
 });
 
 
-// The main agent flow
-const agentFlow = ai.defineFlow(
+// The main orchestration flow. This is more robust than using AI tool-calling for this task.
+const agentOrchestrationFlow = ai.defineFlow(
   {
-    name: 'agentFlow',
+    name: 'agentOrchestrationFlow',
     inputSchema: AgentFlowInputSchema,
     outputSchema: AgentFlowOutputSchema,
   },
   async (input) => {
-    const response = await agentPrompt(input);
-    let svgString: string | undefined;
+    // Step 1: Classify intent of the user's prompt.
+    const { output: intentOutput } = await intentClassificationPrompt({ prompt: input.prompt });
+    // Default to 'chat' if classification fails for any reason.
+    const intent = intentOutput?.intent || 'chat';
 
-    // Look for a tool response in the history.
-    if (response.history) {
-      for (const message of response.history.slice().reverse()) {
-        for (const part of message.content) {
-          if (part.toolResponse) {
-            // The tool's outputSchema is z.string(), so the content is a string.
-            svgString = part.toolResponse.content as string;
-            break; // Found the tool response, no need to look further
-          }
+    // Path 1: User wants to generate a new design.
+    if (intent === 'generate_design') {
+        // Step 2a: Generate a raster image from the text prompt.
+        const { media } = await ai.generate({
+            model: 'googleai/gemini-2.0-flash-preview-image-generation',
+            prompt: `Generate a clean, high-contrast, black-on-white line art image suitable for vectorization and laser cutting, based on the following description: "${input.prompt}". The image should look like a silhouette or a stencil, with only pure black and pure white pixels. The main subject should be clearly defined against a plain white background.`,
+            config: {
+                responseModalities: ['TEXT', 'IMAGE'],
+            },
+        });
+
+        if (!media || !media.url) {
+            return { textResponse: "Lo siento, no pude generar una imagen con esa descripción. ¿Podrías intentar con otra idea?" };
         }
-        if (svgString) break;
-      }
+
+        // Step 2b: Vectorize the generated raster image.
+        const vectorizeInput: VectorizeImageInput = {
+            imageDataUri: media.url,
+            detailLevel: input.detailLevel,
+            smoothness: input.smoothness,
+            removeBackground: input.removeBackground,
+            singlePath: input.singlePath,
+        };
+        const vectorizationResult = await vectorizeImage(vectorizeInput);
+
+        if (!vectorizationResult.svgString) {
+             return { textResponse: "Lo siento, pude generar la imagen pero fallé al vectorizarla. ¿Intentamos de nuevo?" };
+        }
+        
+        // Step 2c: Return the SVG and a canned text response.
+        return {
+            svgString: vectorizationResult.svgString,
+            textResponse: '¡Claro! Aquí está tu diseño. Puedes pedirme ajustes en el chat.',
+        };
+
+    } else { // Path 2: 'chat' or 'unknown' intent.
+        const { output: chatOutput } = await chatPrompt({ prompt: input.prompt });
+        return {
+            textResponse: chatOutput?.response || 'No estoy seguro de cómo responder a eso. ¿Puedes reformularlo?',
+        };
     }
-
-    const textResponse = response.text;
-
-    if (!svgString && !textResponse) {
-        throw new Error('The AI agent returned an empty or unexpected response.');
-    }
-
-    return {
-        svgString,
-        textResponse,
-    };
   }
 );
