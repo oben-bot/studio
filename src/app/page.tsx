@@ -35,6 +35,8 @@ export default function Home() {
                 setThreeDSubType={workflow.setThreeDSubType}
                 fontType={workflow.fontType}
                 setFontType={workflow.setFontType}
+                previewFont={workflow.previewFont}
+                setPreviewFont={workflow.setPreviewFont}
                 textInput={workflow.textInput}
                 setTextInput={workflow.setTextInput}
                 selectedFile={workflow.selectedFile}

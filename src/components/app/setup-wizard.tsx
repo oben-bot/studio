@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import { cn } from '@/lib/utils';
 import { 
-  Scissors, Combine, Paintbrush, Box, Type, Shapes, Pencil, UploadCloud, Rocket, FileImage, Hexagon, CaseUpper, Pilcrow
+  Scissors, Combine, Paintbrush, Box, Type, Shapes, Pencil, UploadCloud, Rocket, FileImage, Hexagon
 } from 'lucide-react';
 import type { WorkType, CorteSubType, ThreeDSubType, FontType } from '@/lib/definitions';
 
@@ -22,6 +23,8 @@ type SetupWizardProps = {
   setThreeDSubType: (value: ThreeDSubType) => void;
   fontType: FontType;
   setFontType: (value: FontType) => void;
+  previewFont: FontType;
+  setPreviewFont: (value: FontType) => void;
   textInput: string;
   setTextInput: (value: string) => void;
   selectedFile: File | null;
@@ -34,16 +37,41 @@ type SetupWizardProps = {
 
 export function SetupWizard({
   workType, setWorkType, corteSubType, setCorteSubType, threeDSubType, setThreeDSubType,
-  fontType, setFontType, textInput, setTextInput, selectedFile, setSelectedFile, 
+  fontType, setFontType, previewFont, setPreviewFont, textInput, setTextInput, selectedFile, setSelectedFile, 
   isProcessing, handleSetupGenerate, isSetupComplete, fileInputRef,
 }: SetupWizardProps) {
 
+  const getFontClass = (font: FontType | '') => {
+    switch (font) {
+      case 'sans-serif':
+        return 'font-sans';
+      case 'serif':
+        return 'font-serif';
+      case 'script':
+        return "font-['cursive']";
+      case 'gothic':
+        return 'font-semibold'; // Using weight as a proxy
+      case 'display':
+        return 'font-semibold tracking-wider'; // Using weight and tracking as a proxy
+      default:
+        return 'font-sans';
+    }
+  };
+  
   const getIdeaStepNumber = () => {
-    if (workType === 'corte' && corteSubType === 'nombre') return 4;
-    if (workType === 'corte' || workType === '3d') return 3;
+    if (workType === 'corte') return 3;
+    if (workType === '3d') return 2;
     return 2;
   }
+
+  const getFontStepNumber = () => {
+     if (workType === 'corte' && corteSubType === 'nombre') return 4;
+     return 3;
+  }
   
+  const showIdeaCard = workType && (workType !== 'corte' || !!corteSubType) && (workType !== '3d' || !!threeDSubType);
+  const showFontCard = workType === 'corte' && corteSubType === 'nombre' && !!textInput.trim();
+
   return (
     <div className='flex flex-col gap-4'>
       <Card>
@@ -90,39 +118,6 @@ export function SetupWizard({
         </Card>
       )}
 
-      {workType === 'corte' && corteSubType === 'nombre' && (
-        <Card>
-          <CardHeader><CardTitle>3. Elige el tipo de fuente</CardTitle></CardHeader>
-          <CardContent>
-            <RadioGroup value={fontType} onValueChange={(val) => setFontType(val as FontType)}>
-              <div className="grid grid-cols-2 gap-4">
-                <Label htmlFor="sans-serif" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
-                  <RadioGroupItem value="sans-serif" id="sans-serif" className="sr-only"/>
-                  <span className="font-semibold font-sans">Sans Serif</span>
-                </Label>
-                 <Label htmlFor="serif" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
-                  <RadioGroupItem value="serif" id="serif" className="sr-only"/>
-                  <span className="font-semibold font-serif">Serif</span>
-                </Label>
-                 <Label htmlFor="script" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
-                  <RadioGroupItem value="script" id="script" className="sr-only"/>
-                  <span className="font-semibold font-['cursive']">Script</span>
-                </Label>
-                 <Label htmlFor="gothic" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
-                  <RadioGroupItem value="gothic" id="gothic" className="sr-only"/>
-                  <span className="font-semibold">Gótico</span>
-                </Label>
-                <Label htmlFor="display" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
-                  <RadioGroupItem value="display" id="display" className="sr-only"/>
-                  <span className="font-semibold">Display</span>
-                </Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
-      )}
-
-
       {workType === '3d' && (
         <Card>
             <CardHeader><CardTitle>2. ¿Diseño nuevo o existente?</CardTitle></CardHeader>
@@ -137,21 +132,32 @@ export function SetupWizard({
         </Card>
       )}
 
-      {isSetupComplete() && (
+      {showIdeaCard && (
         <Card>
           <CardHeader><CardTitle>{getIdeaStepNumber()}. Proporciona tu idea</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             { !(workType === '3d' && threeDSubType === 'existente') && (
               <div>
-                <Label htmlFor="text-prompt" className="mb-2 block">Describe tu idea o escribe el texto a usar</Label>
-                <Input id="text-prompt" placeholder="Ej: un león geométrico, el nombre 'Sofía'..." value={textInput} onChange={e => setTextInput(e.target.value)} />
+                <Label htmlFor="text-prompt" className="mb-2 block">
+                  {workType === 'corte' && corteSubType === 'nombre' ? 'Escribe el texto a diseñar' : 'Describe tu idea'}
+                </Label>
+                <Input id="text-prompt" placeholder="Ej: un león, el nombre 'Sofía'..." value={textInput} onChange={e => setTextInput(e.target.value)} />
               </div>
             )}
+            
+            {workType === 'corte' && corteSubType === 'nombre' && textInput && (
+              <div className="mt-2 p-4 border rounded-md text-center bg-muted/50">
+                <p className={cn("text-4xl font-bold transition-all duration-200", getFontClass(previewFont || fontType))}>
+                  {textInput}
+                </p>
+              </div>
+            )}
+
             { !(workType === 'corte' && corteSubType === 'nombre') && !(workType === '3d' && threeDSubType === 'nuevo') && (
               <>
                 <div className="relative">
                     <Separator />
-                    <span className="absolute left-1/2 -translate-x-1/2 -top-2 bg-background px-2 text-sm text-muted-foreground">O</span>
+                    <span className="absolute left-1/2 -translate-x-1/2 -top-2 bg-card px-2 text-sm text-muted-foreground">O</span>
                 </div>
                 <input 
                   type="file" 
@@ -167,12 +173,50 @@ export function SetupWizard({
               </>
             )}
           </CardContent>
-            <CardFooter>
-              <Button className="w-full" size="lg" disabled={isProcessing} onClick={handleSetupGenerate}>
-                <Rocket className="mr-2"/> Generar Diseño
-              </Button>
-            </CardFooter>
         </Card>
+      )}
+
+      {showFontCard && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{getFontStepNumber()}. Elige el tipo de fuente</CardTitle>
+            <CardDescription>Pasa el cursor sobre una opción para previsualizar.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup value={fontType} onValueChange={(val) => setFontType(val as FontType)}>
+              <div className="grid grid-cols-2 gap-4">
+                <Label htmlFor="sans-serif" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary" onMouseEnter={() => setPreviewFont('sans-serif')} onMouseLeave={() => setPreviewFont('')}>
+                  <RadioGroupItem value="sans-serif" id="sans-serif" className="sr-only"/>
+                  <span className="font-semibold font-sans">Sans Serif</span>
+                </Label>
+                 <Label htmlFor="serif" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary" onMouseEnter={() => setPreviewFont('serif')} onMouseLeave={() => setPreviewFont('')}>
+                  <RadioGroupItem value="serif" id="serif" className="sr-only"/>
+                  <span className="font-semibold font-serif">Serif</span>
+                </Label>
+                 <Label htmlFor="script" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary" onMouseEnter={() => setPreviewFont('script')} onMouseLeave={() => setPreviewFont('')}>
+                  <RadioGroupItem value="script" id="script" className="sr-only"/>
+                  <span className="font-semibold font-['cursive']">Script</span>
+                </Label>
+                 <Label htmlFor="gothic" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary" onMouseEnter={() => setPreviewFont('gothic')} onMouseLeave={() => setPreviewFont('')}>
+                  <RadioGroupItem value="gothic" id="gothic" className="sr-only"/>
+                  <span className="font-semibold">Gótico</span>
+                </Label>
+                <Label htmlFor="display" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary" onMouseEnter={() => setPreviewFont('display')} onMouseLeave={() => setPreviewFont('')}>
+                  <RadioGroupItem value="display" id="display" className="sr-only"/>
+                  <span className="font-semibold">Display</span>
+                </Label>
+              </div>
+            </RadioGroup>
+          </CardContent>
+        </Card>
+      )}
+
+      {isSetupComplete() && (
+        <div className="mt-2">
+            <Button className="w-full" size="lg" disabled={isProcessing} onClick={handleSetupGenerate}>
+              <Rocket className="mr-2"/> Generar Diseño
+            </Button>
+        </div>
       )}
     </div>
   );

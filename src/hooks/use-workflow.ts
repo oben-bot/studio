@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, FormEvent, useEffect } from 'react';
+import { useState, useRef, FormEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { runAgent } from '@/ai/flows/conversational-flow';
 import { vectorizeImage } from '@/ai/flows/vectorize-image-flow';
@@ -24,6 +24,7 @@ export function useWorkflow() {
   const [corteSubType, setCorteSubType] = useState<CorteSubType>('');
   const [threeDSubType, setThreeDSubType] = useState<ThreeDSubType>('');
   const [fontType, setFontType] = useState<FontType>('');
+  const [previewFont, setPreviewFont] = useState<FontType>('');
   const [textInput, setTextInput] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -176,7 +177,7 @@ export function useWorkflow() {
   };
 
   const handleSetupGenerate = () => {
-    if (selectedFile) {
+    if (selectedFile && workType !== 'corte') { // Prioritize file if not in a text-focused flow
         processImageFile(selectedFile);
         return;
     }
@@ -198,37 +199,40 @@ export function useWorkflow() {
     
     if (prompt) {
         processTextPrompt(prompt);
+    } else if (selectedFile) { // Fallback to image processing if no prompt was built but a file exists
+        processImageFile(selectedFile);
     }
   };
 
   const isSetupComplete = () => {
     if (!workType) return false;
-    
-    if (workType === 'corte') {
-      if (!corteSubType) return false;
-      if (corteSubType === 'nombre' && !fontType) return false;
-    }
-    
-    if (workType === '3d') {
-      if (!threeDSubType) return false;
-      if (threeDSubType === 'existente') return !!selectedFile;
-    }
-    
-    if (textInput.trim() || selectedFile) {
-        if (workType === 'corte' && corteSubType === 'nombre') {
-            return !!textInput.trim();
+
+    switch (workType) {
+      case 'corte':
+        if (!corteSubType) return false;
+        if (corteSubType === 'nombre') {
+          return !!textInput.trim() && !!fontType;
         }
-        if (workType === '3d' && threeDSubType === 'nuevo') {
-            return !!textInput.trim();
+        return !!textInput.trim() || !!selectedFile;
+      
+      case 'corte-grabado':
+      case 'grabado':
+        return !!textInput.trim() || !!selectedFile;
+
+      case '3d':
+        if (!threeDSubType) return false;
+        if (threeDSubType === 'nuevo') {
+          return !!textInput.trim();
         }
-        if (workType === '3d' && threeDSubType === 'existente') {
-            return !!selectedFile;
+        if (threeDSubType === 'existente') {
+          return !!selectedFile;
         }
-        return true;
+        return false;
+
+      default:
+        return false;
     }
-    
-    return false;
-  }
+  };
 
   const resetWorkflow = () => {
     setMode('setup');
@@ -236,6 +240,7 @@ export function useWorkflow() {
     setCorteSubType('');
     setThreeDSubType('');
     setFontType('');
+    setPreviewFont('');
     setTextInput('');
     setSelectedFile(null);
     setSvgResult(null);
@@ -264,6 +269,8 @@ export function useWorkflow() {
     setThreeDSubType,
     fontType,
     setFontType,
+    previewFont,
+    setPreviewFont,
     textInput,
     setTextInput,
     selectedFile,
