@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { 
   Hexagon, Download, Settings, Bot, Send, Image as ImageIcon, Ruler as RulerIcon, Layers, LoaderCircle,
-  Scissors, Combine, Paintbrush, Box, Type, Shapes, Pencil, UploadCloud, Rocket
+  Scissors, Combine, Paintbrush, Box, Type, Shapes, Pencil, UploadCloud, Rocket, FileImage
 } from 'lucide-react';
 import { vectorizeImage } from '@/ai/flows/vectorize-image-flow';
 import { runAgent } from '@/ai/flows/conversational-flow';
