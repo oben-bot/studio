@@ -202,7 +202,7 @@ export function SetupWizard({
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona un estilo de fuente..." />
               </SelectTrigger>
-              <SelectContent onMouseLeave={() => setPreviewFont('')} side="bottom">
+              <SelectContent onMouseLeave={() => setPreviewFont('')} side="bottom" avoidCollisions={false}>
                 {fontOptions.map((option) => (
                   <SelectItem
                     key={option.value}
