@@ -9,9 +9,9 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { 
-  Scissors, Combine, Paintbrush, Box, Type, Shapes, Pencil, UploadCloud, Rocket, FileImage, Hexagon
+  Scissors, Combine, Paintbrush, Box, Type, Shapes, Pencil, UploadCloud, Rocket, FileImage, Hexagon, CaseUpper, Pilcrow
 } from 'lucide-react';
-import type { WorkType, CorteSubType, ThreeDSubType } from '@/lib/definitions';
+import type { WorkType, CorteSubType, ThreeDSubType, FontType } from '@/lib/definitions';
 
 type SetupWizardProps = {
   workType: WorkType;
@@ -20,6 +20,8 @@ type SetupWizardProps = {
   setCorteSubType: (value: CorteSubType) => void;
   threeDSubType: ThreeDSubType;
   setThreeDSubType: (value: ThreeDSubType) => void;
+  fontType: FontType;
+  setFontType: (value: FontType) => void;
   textInput: string;
   setTextInput: (value: string) => void;
   selectedFile: File | null;
@@ -32,9 +34,16 @@ type SetupWizardProps = {
 
 export function SetupWizard({
   workType, setWorkType, corteSubType, setCorteSubType, threeDSubType, setThreeDSubType,
-  textInput, setTextInput, selectedFile, setSelectedFile, isProcessing,
-  handleSetupGenerate, isSetupComplete, fileInputRef,
+  fontType, setFontType, textInput, setTextInput, selectedFile, setSelectedFile, 
+  isProcessing, handleSetupGenerate, isSetupComplete, fileInputRef,
 }: SetupWizardProps) {
+
+  const getIdeaStepNumber = () => {
+    if (workType === 'corte' && corteSubType === 'nombre') return 4;
+    if (workType === 'corte' || workType === '3d') return 3;
+    return 2;
+  }
+  
   return (
     <div className='flex flex-col gap-4'>
       <Card>
@@ -81,6 +90,39 @@ export function SetupWizard({
         </Card>
       )}
 
+      {workType === 'corte' && corteSubType === 'nombre' && (
+        <Card>
+          <CardHeader><CardTitle>3. Elige el tipo de fuente</CardTitle></CardHeader>
+          <CardContent>
+            <RadioGroup value={fontType} onValueChange={(val) => setFontType(val as FontType)}>
+              <div className="grid grid-cols-2 gap-4">
+                <Label htmlFor="sans-serif" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
+                  <RadioGroupItem value="sans-serif" id="sans-serif" className="sr-only"/>
+                  <span className="font-semibold font-sans">Sans Serif</span>
+                </Label>
+                 <Label htmlFor="serif" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
+                  <RadioGroupItem value="serif" id="serif" className="sr-only"/>
+                  <span className="font-semibold font-serif">Serif</span>
+                </Label>
+                 <Label htmlFor="script" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
+                  <RadioGroupItem value="script" id="script" className="sr-only"/>
+                  <span className="font-semibold font-['cursive']">Script</span>
+                </Label>
+                 <Label htmlFor="gothic" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
+                  <RadioGroupItem value="gothic" id="gothic" className="sr-only"/>
+                  <span className="font-semibold">Gótico</span>
+                </Label>
+                <Label htmlFor="display" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary">
+                  <RadioGroupItem value="display" id="display" className="sr-only"/>
+                  <span className="font-semibold">Display</span>
+                </Label>
+              </div>
+            </RadioGroup>
+          </CardContent>
+        </Card>
+      )}
+
+
       {workType === '3d' && (
         <Card>
             <CardHeader><CardTitle>2. ¿Diseño nuevo o existente?</CardTitle></CardHeader>
@@ -95,9 +137,9 @@ export function SetupWizard({
         </Card>
       )}
 
-      {workType && ( (workType !== 'corte' && workType !== '3d') || (workType === 'corte' && corteSubType) || (workType === '3d' && threeDSubType)) && (
+      {isSetupComplete() && (
         <Card>
-          <CardHeader><CardTitle>3. Proporciona tu idea</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{getIdeaStepNumber()}. Proporciona tu idea</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             { !(workType === '3d' && threeDSubType === 'existente') && (
               <div>
@@ -126,7 +168,7 @@ export function SetupWizard({
             )}
           </CardContent>
             <CardFooter>
-              <Button className="w-full" size="lg" disabled={!isSetupComplete() || isProcessing} onClick={handleSetupGenerate}>
+              <Button className="w-full" size="lg" disabled={isProcessing} onClick={handleSetupGenerate}>
                 <Rocket className="mr-2"/> Generar Diseño
               </Button>
             </CardFooter>

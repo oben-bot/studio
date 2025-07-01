@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An intelligent agent that can chat with the user and create vector images.
@@ -19,6 +20,7 @@ const AgentFlowInputSchema = z.object({
   smoothness: z.number().min(0).max(100),
   removeBackground: z.boolean(),
   singlePath: z.boolean(),
+  font: z.string().optional().describe('The selected font style for text generation (e.g., sans-serif, gothic, script).'),
 });
 export type AgentFlowInput = z.infer<typeof AgentFlowInputSchema>;
 
@@ -70,10 +72,17 @@ const agentOrchestrationFlow = ai.defineFlow(
 
     // Path 1: User wants to generate a new design.
     if (intent === 'generate_design') {
+        // Construct the prompt for image generation, including font style if provided.
+        let generationPrompt = `Generate a clean, high-contrast, black-on-white line art image suitable for vectorization and laser cutting, based on the following description: "${input.prompt}".`;
+        if (input.font) {
+            generationPrompt += ` Use a font with a ${input.font} style.`;
+        }
+        generationPrompt += ` The image should look like a silhouette or a stencil, with only pure black and pure white pixels. The main subject should be clearly defined against a plain white background.`;
+
         // Step 2a: Generate a raster image from the text prompt.
         const { media } = await ai.generate({
             model: 'googleai/gemini-2.0-flash-preview-image-generation',
-            prompt: `Generate a clean, high-contrast, black-on-white line art image suitable for vectorization and laser cutting, based on the following description: "${input.prompt}". The image should look like a silhouette or a stencil, with only pure black and pure white pixels. The main subject should be clearly defined against a plain white background.`,
+            prompt: generationPrompt,
             config: {
                 responseModalities: ['TEXT', 'IMAGE'],
             },

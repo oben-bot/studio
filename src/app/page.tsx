@@ -33,6 +33,8 @@ export default function Home() {
                 setCorteSubType={workflow.setCorteSubType}
                 threeDSubType={workflow.threeDSubType}
                 setThreeDSubType={workflow.setThreeDSubType}
+                fontType={workflow.fontType}
+                setFontType={workflow.setFontType}
                 textInput={workflow.textInput}
                 setTextInput={workflow.setTextInput}
                 selectedFile={workflow.selectedFile}

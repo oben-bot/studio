@@ -5,7 +5,7 @@ import { useState, useRef, FormEvent, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { runAgent } from '@/ai/flows/conversational-flow';
 import { vectorizeImage } from '@/ai/flows/vectorize-image-flow';
-import type { ChatMessage, UiMode, WorkType, CorteSubType, ThreeDSubType } from '@/lib/definitions';
+import type { ChatMessage, UiMode, WorkType, CorteSubType, ThreeDSubType, FontType } from '@/lib/definitions';
 
 export function useWorkflow() {
   const { toast } = useToast();
@@ -23,6 +23,7 @@ export function useWorkflow() {
   const [workType, setWorkType] = useState<WorkType>('');
   const [corteSubType, setCorteSubType] = useState<CorteSubType>('');
   const [threeDSubType, setThreeDSubType] = useState<ThreeDSubType>('');
+  const [fontType, setFontType] = useState<FontType>('');
   const [textInput, setTextInput] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -111,6 +112,7 @@ export function useWorkflow() {
         smoothness: smoothness[0],
         removeBackground,
         singlePath,
+        font: fontType,
       });
 
       if (result.textResponse) {
@@ -152,6 +154,7 @@ export function useWorkflow() {
         smoothness: smoothness[0],
         removeBackground,
         singlePath,
+        font: fontType,
       });
 
       if (result.textResponse) {
@@ -180,7 +183,7 @@ export function useWorkflow() {
 
     let prompt = '';
     if (workType === 'corte') {
-        if (corteSubType === 'nombre') prompt = `Genera un diseño del nombre "${textInput}" para corte láser, con un estilo claro y unible.`;
+        if (corteSubType === 'nombre') prompt = `Genera un diseño del nombre "${textInput}" para corte láser, con un estilo de fuente ${fontType}.`;
         else if (corteSubType === 'figura') prompt = `Genera una figura simple de ${textInput} para corte láser, como una silueta o esténcil.`;
         else if (corteSubType === 'contorno') prompt = `Genera solo el contorno de ${textInput} para corte láser.`;
         else if (corteSubType === 'forma') prompt = `Genera una forma abstracta basada en "${textInput}" para corte láser.`;
@@ -200,14 +203,27 @@ export function useWorkflow() {
 
   const isSetupComplete = () => {
     if (!workType) return false;
-    if (workType === 'corte' && !corteSubType) return false;
-    if (workType === '3d' && !threeDSubType) return false;
-
-    if (workType === '3d' && threeDSubType === 'existente') {
-        return !!selectedFile;
+    
+    if (workType === 'corte') {
+      if (!corteSubType) return false;
+      if (corteSubType === 'nombre' && !fontType) return false;
+    }
+    
+    if (workType === '3d') {
+      if (!threeDSubType) return false;
+      if (threeDSubType === 'existente') return !!selectedFile;
     }
     
     if (textInput.trim() || selectedFile) {
+        if (workType === 'corte' && corteSubType === 'nombre') {
+            return !!textInput.trim();
+        }
+        if (workType === '3d' && threeDSubType === 'nuevo') {
+            return !!textInput.trim();
+        }
+        if (workType === '3d' && threeDSubType === 'existente') {
+            return !!selectedFile;
+        }
         return true;
     }
     
@@ -219,6 +235,7 @@ export function useWorkflow() {
     setWorkType('');
     setCorteSubType('');
     setThreeDSubType('');
+    setFontType('');
     setTextInput('');
     setSelectedFile(null);
     setSvgResult(null);
@@ -245,6 +262,8 @@ export function useWorkflow() {
     setCorteSubType,
     threeDSubType,
     setThreeDSubType,
+    fontType,
+    setFontType,
     textInput,
     setTextInput,
     selectedFile,
