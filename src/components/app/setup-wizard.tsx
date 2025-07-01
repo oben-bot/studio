@@ -13,6 +13,7 @@ import {
   Scissors, Combine, Paintbrush, Box, Type, Shapes, Pencil, UploadCloud, Rocket, FileImage, Hexagon
 } from 'lucide-react';
 import type { WorkType, CorteSubType, ThreeDSubType, FontType } from '@/lib/definitions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type SetupWizardProps = {
   workType: WorkType;
@@ -41,20 +42,32 @@ export function SetupWizard({
   isProcessing, handleSetupGenerate, isSetupComplete, fileInputRef,
 }: SetupWizardProps) {
 
+  const fontOptions: { value: FontType; label: string }[] = [
+    { value: 'sans-serif', label: 'Sans Serif' },
+    { value: 'serif', label: 'Serif' },
+    { value: 'script', label: 'Script' },
+    { value: 'gothic', label: 'Gótico' },
+    { value: 'display', label: 'Display' },
+    { value: 'monospace', label: 'Monospace' },
+    { value: 'fantasy', label: 'Fantasía' },
+    { value: 'handwriting', label: 'Manuscrita' },
+    { value: 'blackletter', label: 'Blackletter' },
+    { value: 'decorative', label: 'Decorativa' },
+  ];
+
   const getFontClass = (font: FontType | '') => {
     switch (font) {
-      case 'sans-serif':
-        return 'font-sans';
-      case 'serif':
-        return 'font-serif';
-      case 'script':
-        return "font-['cursive']";
-      case 'gothic':
-        return 'font-semibold'; // Using weight as a proxy
-      case 'display':
-        return 'font-semibold tracking-wider'; // Using weight and tracking as a proxy
-      default:
-        return 'font-sans';
+      case 'sans-serif': return 'font-sans';
+      case 'serif': return 'font-serif';
+      case 'script': return "font-['cursive']";
+      case 'gothic': return 'font-semibold tracking-wider';
+      case 'display': return 'font-bold tracking-widest';
+      case 'monospace': return 'font-mono';
+      case 'fantasy': return "font-['fantasy']";
+      case 'handwriting': return "font-['cursive']";
+      case 'blackletter': return 'font-serif font-black';
+      case 'decorative': return "font-['fantasy'] tracking-wider";
+      default: return 'font-sans';
     }
   };
   
@@ -180,33 +193,27 @@ export function SetupWizard({
         <Card>
           <CardHeader>
             <CardTitle>{getFontStepNumber()}. Elige el tipo de fuente</CardTitle>
-            <CardDescription>Pasa el cursor sobre una opción para previsualizar.</CardDescription>
+            <CardDescription>
+              Selecciona un estilo. Pasa el cursor sobre las opciones para previsualizar.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <RadioGroup value={fontType} onValueChange={(val) => setFontType(val as FontType)}>
-              <div className="grid grid-cols-2 gap-4">
-                <Label htmlFor="sans-serif" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary" onMouseEnter={() => setPreviewFont('sans-serif')} onMouseLeave={() => setPreviewFont('')}>
-                  <RadioGroupItem value="sans-serif" id="sans-serif" className="sr-only"/>
-                  <span className="font-semibold font-sans">Sans Serif</span>
-                </Label>
-                 <Label htmlFor="serif" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary" onMouseEnter={() => setPreviewFont('serif')} onMouseLeave={() => setPreviewFont('')}>
-                  <RadioGroupItem value="serif" id="serif" className="sr-only"/>
-                  <span className="font-semibold font-serif">Serif</span>
-                </Label>
-                 <Label htmlFor="script" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary" onMouseEnter={() => setPreviewFont('script')} onMouseLeave={() => setPreviewFont('')}>
-                  <RadioGroupItem value="script" id="script" className="sr-only"/>
-                  <span className="font-semibold font-['cursive']">Script</span>
-                </Label>
-                 <Label htmlFor="gothic" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary" onMouseEnter={() => setPreviewFont('gothic')} onMouseLeave={() => setPreviewFont('')}>
-                  <RadioGroupItem value="gothic" id="gothic" className="sr-only"/>
-                  <span className="font-semibold">Gótico</span>
-                </Label>
-                <Label htmlFor="display" className="p-4 border rounded-md cursor-pointer has-[input:checked]:bg-primary has-[input:checked]:text-primary-foreground has-[input:checked]:border-primary" onMouseEnter={() => setPreviewFont('display')} onMouseLeave={() => setPreviewFont('')}>
-                  <RadioGroupItem value="display" id="display" className="sr-only"/>
-                  <span className="font-semibold">Display</span>
-                </Label>
-              </div>
-            </RadioGroup>
+            <Select value={fontType} onValueChange={(val) => setFontType(val as FontType)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona un estilo de fuente..." />
+              </SelectTrigger>
+              <SelectContent onMouseLeave={() => setPreviewFont('')}>
+                {fontOptions.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    onMouseEnter={() => setPreviewFont(option.value)}
+                  >
+                    <span className={getFontClass(option.value)}>{option.label}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </CardContent>
         </Card>
       )}
