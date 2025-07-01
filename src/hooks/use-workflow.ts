@@ -1,0 +1,265 @@
+
+'use client';
+
+import { useState, useRef, FormEvent, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { runAgent } from '@/ai/flows/conversational-flow';
+import { vectorizeImage } from '@/ai/flows/vectorize-image-flow';
+import type { ChatMessage, UiMode, WorkType, CorteSubType, ThreeDSubType } from '@/lib/definitions';
+
+export function useWorkflow() {
+  const { toast } = useToast();
+  const [svgResult, setSvgResult] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  // States for vectorization settings
+  const [detailLevel, setDetailLevel] = useState([50]);
+  const [smoothness, setSmoothness] = useState([75]);
+  const [removeBackground, setRemoveBackground] = useState(true);
+  const [singlePath, setSinglePath] = useState(true);
+
+  // States for UI mode and workflow
+  const [mode, setMode] = useState<UiMode>('setup');
+  const [workType, setWorkType] = useState<WorkType>('');
+  const [corteSubType, setCorteSubType] = useState<CorteSubType>('');
+  const [threeDSubType, setThreeDSubType] = useState<ThreeDSubType>('');
+  const [textInput, setTextInput] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // States for chat
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const handleDownload = () => {
+    if (!svgResult) return;
+    const blob = new Blob([svgResult], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'obn-kodex-vector.svg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+  
+  const processImageFile = async (file: File) => {
+    if (!file || isProcessing) return;
+    
+    setIsProcessing(true);
+    setSvgResult(null);
+
+    const userMessage: ChatMessage = { role: 'user', content: `Vectorizando la imagen: ${file.name}` };
+    setChatMessages(prev => [...prev, userMessage]);
+    setMode('chat'); // Switch to chat mode
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      try {
+        const imageDataUri = reader.result as string;
+        const result = await vectorizeImage({
+          imageDataUri,
+          detailLevel: detailLevel[0],
+          smoothness: smoothness[0],
+          removeBackground,
+          singlePath,
+        });
+
+        if (result.svgString) {
+          setSvgResult(result.svgString);
+          const assistantMessage: ChatMessage = { role: 'assistant', content: '¡Imagen vectorizada! Puedes usar el chat para pedir ajustes, o exportarla.' };
+          setChatMessages(prev => [...prev, assistantMessage]);
+        } else {
+           throw new Error('La IA no pudo generar un SVG.');
+        }
+      } catch (error) {
+        console.error(error);
+        const errorMessage: ChatMessage = { role: 'assistant', content: 'Lo siento, ocurrió un error al vectorizar la imagen.' };
+        setChatMessages(prev => [...prev, errorMessage]);
+        toast({ variant: 'destructive', title: 'Error de Vectorización' });
+      } finally {
+        setIsProcessing(false);
+        setSelectedFile(null);
+      }
+    };
+     reader.onerror = (error) => {
+      console.error("Error reading file:", error);
+      const errorMessage = { role: 'assistant', content: 'Ocurrió un error al leer el archivo.' };
+      setChatMessages(prev => [...prev, errorMessage]);
+      setIsProcessing(false);
+      setSelectedFile(null);
+    };
+  };
+
+  const processTextPrompt = async (prompt: string) => {
+    if (!prompt.trim() || isProcessing) return;
+
+    setIsProcessing(true);
+    setSvgResult(null);
+    
+    const userMessage: ChatMessage = { role: 'user', content: prompt };
+    setChatMessages([userMessage]); // Start a new conversation
+    setMode('chat'); // Switch to chat mode
+
+    try {
+      const result = await runAgent({
+        prompt: prompt,
+        detailLevel: detailLevel[0],
+        smoothness: smoothness[0],
+        removeBackground,
+        singlePath,
+      });
+
+      if (result.textResponse) {
+        const assistantMessage: ChatMessage = { role: 'assistant', content: result.textResponse };
+        setChatMessages(prev => [...prev, assistantMessage]);
+      }
+      if (result.svgString) {
+        setSvgResult(result.svgString);
+      }
+      if (!result.textResponse && !result.svgString) {
+        throw new Error("El agente no devolvió una respuesta válida.")
+      }
+
+    } catch (error) {
+      console.error(error);
+      const errorMessage: ChatMessage = { role: 'assistant', content: 'Lo siento, ocurrió un error.' };
+      setChatMessages(prev => [...prev, errorMessage]);
+      toast({ variant: 'destructive', title: 'Error de Generación' });
+    } finally {
+      setIsProcessing(false);
+      setTextInput('');
+    }
+  }
+
+  const handleChatSubmit = async (e?: FormEvent) => {
+    if (e) e.preventDefault();
+    if (!chatInput.trim() || isProcessing) return;
+
+    const currentPrompt = chatInput;
+    const userMessage: ChatMessage = { role: 'user', content: currentPrompt };
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput('');
+    setIsProcessing(true);
+    
+    try {
+      const result = await runAgent({
+        prompt: currentPrompt,
+        detailLevel: detailLevel[0],
+        smoothness: smoothness[0],
+        removeBackground,
+        singlePath,
+      });
+
+      if (result.textResponse) {
+        const assistantMessage: ChatMessage = { role: 'assistant', content: result.textResponse };
+        setChatMessages(prev => [...prev, assistantMessage]);
+      }
+      if (result.svgString) {
+        setSvgResult(result.svgString);
+      }
+
+    } catch (error) {
+      console.error(error);
+      const errorMessage: ChatMessage = { role: 'assistant', content: 'Lo siento, un error ocurrió.' };
+      setChatMessages(prev => [...prev, errorMessage]);
+      toast({ variant: 'destructive', title: 'Error del Asistente' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSetupGenerate = () => {
+    if (selectedFile) {
+        processImageFile(selectedFile);
+        return;
+    }
+
+    let prompt = '';
+    if (workType === 'corte') {
+        if (corteSubType === 'nombre') prompt = `Genera un diseño del nombre "${textInput}" para corte láser, con un estilo claro y unible.`;
+        else if (corteSubType === 'figura') prompt = `Genera una figura simple de ${textInput} para corte láser, como una silueta o esténcil.`;
+        else if (corteSubType === 'contorno') prompt = `Genera solo el contorno de ${textInput} para corte láser.`;
+        else if (corteSubType === 'forma') prompt = `Genera una forma abstracta basada en "${textInput}" para corte láser.`;
+        else prompt = `Genera un diseño de "${textInput}" para corte láser.`;
+    } else if (workType === 'corte-grabado') {
+        prompt = `Genera un diseño de "${textInput}" para corte y grabado láser, con áreas bien definidas para cada proceso.`;
+    } else if (workType === 'grabado') {
+        prompt = `Genera un diseño detallado de "${textInput}" para grabado láser.`;
+    } else if (workType === '3d' && threeDSubType === 'nuevo') {
+        prompt = `Genera un diseño de ${textInput} que simule un efecto 3D en capas para corte láser.`;
+    }
+    
+    if (prompt) {
+        processTextPrompt(prompt);
+    }
+  };
+
+  const isSetupComplete = () => {
+    if (!workType) return false;
+    if (workType === 'corte' && !corteSubType) return false;
+    if (workType === '3d' && !threeDSubType) return false;
+
+    if (workType === '3d' && threeDSubType === 'existente') {
+        return !!selectedFile;
+    }
+    
+    if (textInput.trim() || selectedFile) {
+        return true;
+    }
+    
+    return false;
+  }
+
+  const resetWorkflow = () => {
+    setMode('setup');
+    setWorkType('');
+    setCorteSubType('');
+    setThreeDSubType('');
+    setTextInput('');
+    setSelectedFile(null);
+    setSvgResult(null);
+    setChatMessages([]);
+  }
+
+  return {
+    // State
+    svgResult,
+    isProcessing,
+    detailLevel,
+    setDetailLevel,
+    smoothness,
+    setSmoothness,
+    removeBackground,
+    setRemoveBackground,
+    singlePath,
+    setSinglePath,
+    mode,
+    setMode,
+    workType,
+    setWorkType,
+    corteSubType,
+    setCorteSubType,
+    threeDSubType,
+    setThreeDSubType,
+    textInput,
+    setTextInput,
+    selectedFile,
+    setSelectedFile,
+    chatInput,
+    setChatInput,
+    chatMessages,
+    setChatMessages,
+    // Refs
+    fileInputRef,
+    // Handlers
+    handleDownload,
+    handleChatSubmit,
+    handleSetupGenerate,
+    isSetupComplete,
+    resetWorkflow,
+  };
+}
