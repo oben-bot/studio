@@ -79,17 +79,25 @@ const agentOrchestrationFlow = ai.defineFlow(
     // Path 1: User wants to generate a new design.
     if (intent === 'generate_design') {
       try {
-        // Construct the prompt for image generation, including font style if provided.
-        let generationPrompt = `Generate a clean, high-contrast, black-on-white line art image suitable for vectorization and laser cutting, based on the following description: "${input.prompt}".`;
+        // The incoming `input.prompt` is now cleaner and in English.
+        // We can construct a more direct prompt for the image generator.
+        let generationPrompt: string;
+        
         if (input.font) {
-            generationPrompt += ` Use a font with a ${input.font} style.`;
+          // If a font is provided, it's a text design. The prompt is the text itself.
+          generationPrompt = `The text "${input.prompt}" in a high-contrast, artistic ${input.font} font style.`;
+        } else {
+          // For other designs, use the prompt as a description.
+          generationPrompt = input.prompt;
         }
-        generationPrompt += ` The image should look like a silhouette or a stencil, with only pure black and pure white pixels. The main subject should be clearly defined against a plain white background.`;
+
+        // Add universal instructions for laser cutting optimization.
+        const finalPrompt = `${generationPrompt} The final image must be a clean, black-on-white line art. It should be suitable for vectorization and laser cutting, looking like a silhouette or a stencil with only pure black and pure white pixels on a plain white background.`;
 
         // Step 2a: Generate a raster image from the text prompt.
         const { media } = await ai.generate({
             model: 'googleai/gemini-2.0-flash-preview-image-generation',
-            prompt: generationPrompt,
+            prompt: finalPrompt, // Use the new, cleaner prompt
             config: {
                 responseModalities: ['TEXT', 'IMAGE'],
             },

@@ -96,13 +96,13 @@ export function useWorkflow() {
     };
   };
 
-  const processTextPrompt = async (prompt: string) => {
+  const processTextPrompt = async (prompt: string, userFacingPrompt: string) => {
     if (!prompt.trim() || isProcessing) return;
 
     setIsProcessing(true);
     setSvgResult(null);
     
-    const userMessage: ChatMessage = { role: 'user', content: prompt };
+    const userMessage: ChatMessage = { role: 'user', content: userFacingPrompt };
     setChatMessages([userMessage]); // Start a new conversation
     setMode('chat'); // Switch to chat mode
 
@@ -134,7 +134,7 @@ export function useWorkflow() {
       toast({ variant: 'destructive', title: 'Error de Generación' });
     } finally {
       setIsProcessing(false);
-      setTextInput('');
+      // No clearing textInput so user can re-generate
     }
   }
 
@@ -155,7 +155,7 @@ export function useWorkflow() {
         smoothness: smoothness[0],
         removeBackground,
         singlePath,
-        font: fontType,
+        font: fontType, // Pass font type for contextual adjustments
       });
 
       if (result.textResponse) {
@@ -177,29 +177,34 @@ export function useWorkflow() {
   };
 
   const handleSetupGenerate = () => {
-    if (selectedFile && workType !== 'corte') { // Prioritize file if not in a text-focused flow
+    // If a file is selected and the flow is not text-only ('nombre'), process the image.
+    if (selectedFile && !(workType === 'corte' && corteSubType === 'nombre')) {
         processImageFile(selectedFile);
         return;
     }
 
     let prompt = '';
+    // For text prompts, we build a simple, direct prompt in English for the AI.
     if (workType === 'corte') {
-        if (corteSubType === 'nombre') prompt = `Genera un diseño del nombre "${textInput}" para corte láser, con un estilo de fuente ${fontType}.`;
-        else if (corteSubType === 'figura') prompt = `Genera una figura simple de ${textInput} para corte láser, como una silueta o esténcil.`;
-        else if (corteSubType === 'contorno') prompt = `Genera solo el contorno de ${textInput} para corte láser.`;
-        else if (corteSubType === 'forma') prompt = `Genera una forma abstracta basada en "${textInput}" para corte láser.`;
-        else prompt = `Genera un diseño de "${textInput}" para corte láser.`;
+        if (corteSubType === 'nombre') {
+          // For names, the prompt is just the text itself. The font is a separate parameter.
+          prompt = textInput; 
+        }
+        else if (corteSubType === 'figura') prompt = `A simple figure of ${textInput} for laser cutting, like a silhouette or stencil.`;
+        else if (corteSubType === 'contorno') prompt = `The outline of ${textInput} for laser cutting.`;
+        else if (corteSubType === 'forma') prompt = `An abstract shape based on "${textInput}" for laser cutting.`;
     } else if (workType === 'corte-grabado') {
-        prompt = `Genera un diseño de "${textInput}" para corte y grabado láser, con áreas bien definidas para cada proceso.`;
+        prompt = `A design of "${textInput}" for laser cutting and engraving, with well-defined areas for each process.`;
     } else if (workType === 'grabado') {
-        prompt = `Genera un diseño detallado de "${textInput}" para grabado láser.`;
+        prompt = `A detailed design of "${textInput}" for laser engraving.`;
     } else if (workType === '3d' && threeDSubType === 'nuevo') {
-        prompt = `Genera un diseño de ${textInput} que simule un efecto 3D en capas para corte láser.`;
+        prompt = `A design of ${textInput} that simulates a layered 3D effect for laser cutting.`;
     }
     
     if (prompt) {
-        processTextPrompt(prompt);
-    } else if (selectedFile) { // Fallback to image processing if no prompt was built but a file exists
+        // We pass the engineered prompt to the AI, but show the user's original text input in the chat.
+        processTextPrompt(prompt, textInput);
+    } else if (selectedFile) { // Fallback to image processing if no text prompt was built but a file exists
         processImageFile(selectedFile);
     }
   };
