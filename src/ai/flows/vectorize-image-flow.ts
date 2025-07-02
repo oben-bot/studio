@@ -68,17 +68,35 @@ const vectorizeImageFlow = ai.defineFlow(
   },
   async (input) => {
     const response = await prompt(input);
-    const output = response.output;
+    let svgString: string | undefined;
 
-    if (!output?.svgString) {
-      throw new Error('The AI failed to generate an SVG string.');
+    // First, try to get the structured output. This is the ideal case.
+    if (response.output?.svgString) {
+      svgString = response.output.svgString;
+    } else {
+      // If structured output fails, try to find an SVG in the raw text response.
+      // This is a robust fallback for when the model doesn't follow JSON instructions perfectly.
+      const rawText = response.text;
+      if (rawText) {
+        const svgMatch = rawText.match(/<svg[\s\S]*?<\/svg>/);
+        if (svgMatch) {
+          svgString = svgMatch[0];
+        }
+      }
     }
 
-    // Basic validation to prevent rendering garbage
-    if (!output.svgString.trim().startsWith('<svg')) {
-      throw new Error('The AI returned an invalid SVG format.');
+    // If no SVG could be found by either method, throw an error.
+    if (!svgString) {
+      console.error("Could not extract SVG string from AI response.", { output: response.output, text: response.text });
+      throw new Error('La IA no pudo generar un SVG a partir de la imagen.');
     }
 
-    return { svgString: output.svgString };
+    // Basic validation to prevent rendering garbage.
+    if (!svgString.trim().startsWith('<svg')) {
+       console.error("Extracted SVG string is invalid.", svgString);
+       throw new Error('La IA devolvió un formato SVG no válido.');
+    }
+
+    return { svgString: svgString };
   }
 );
