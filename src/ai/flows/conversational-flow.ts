@@ -100,17 +100,23 @@ const agentOrchestrationFlow = ai.defineFlow(
             removeBackground: input.removeBackground,
             singlePath: input.singlePath,
         };
-        const vectorizationResult = await vectorizeImage(vectorizeInput);
 
-        if (!vectorizationResult.svgString) {
-             return { textResponse: "Lo siento, pude generar la imagen pero fallé al vectorizarla. ¿Intentamos de nuevo?" };
+        try {
+            const vectorizationResult = await vectorizeImage(vectorizeInput);
+
+            if (!vectorizationResult.svgString) {
+                return { textResponse: "Lo siento, pude generar la imagen pero fallé al vectorizarla. ¿Intentamos de nuevo?" };
+            }
+            
+            // Step 2c: Return the SVG and a canned text response.
+            return {
+                svgString: vectorizationResult.svgString,
+                textResponse: '¡Claro! Aquí está tu diseño. Puedes pedirme ajustes en el chat.',
+            };
+        } catch (error) {
+            console.error("Vectorization failed:", error);
+            return { textResponse: "Pude generar la imagen, pero hubo un problema técnico al convertirla a un vector. Puedes intentarlo de nuevo con otros ajustes de vectorización o una idea diferente." };
         }
-        
-        // Step 2c: Return the SVG and a canned text response.
-        return {
-            svgString: vectorizationResult.svgString,
-            textResponse: '¡Claro! Aquí está tu diseño. Puedes pedirme ajustes en el chat.',
-        };
 
     } else { // Path 2: 'chat' or 'unknown' intent.
         const { output: chatOutput } = await chatPrompt({ prompt: input.prompt });

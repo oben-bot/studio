@@ -43,16 +43,26 @@ export function SetupWizard({
 }: SetupWizardProps) {
 
   const fontOptions: { value: FontType; label: string }[] = [
-    { value: 'sans-serif', label: 'Sans Serif' },
-    { value: 'serif', label: 'Serif' },
-    { value: 'script', label: 'Script' },
+    { value: 'sans-serif', label: 'Sans Serif (Moderna)' },
+    { value: 'serif', label: 'Serif (Clásica)' },
+    { value: 'script', label: 'Script (Cursiva)' },
     { value: 'gothic', label: 'Gótico' },
-    { value: 'display', label: 'Display' },
-    { value: 'monospace', label: 'Monospace' },
+    { value: 'display', label: 'Display (Decorativa)' },
+    { value: 'monospace', label: 'Monospace (Máquina de escribir)' },
     { value: 'fantasy', label: 'Fantasía' },
     { value: 'handwriting', label: 'Manuscrita' },
-    { value: 'blackletter', label: 'Blackletter' },
-    { value: 'decorative', label: 'Decorativa' },
+    { value: 'blackletter', label: 'Blackletter (Antigua)' },
+    { value: 'stencil', label: 'Stencil (Plantilla)' },
+    { value: 'futuristic', label: 'Futurista' },
+    { value: 'retro', label: 'Retro' },
+    { value: 'comic', label: 'Comic' },
+    { value: 'calligraphy', label: 'Caligrafía' },
+    { value: 'graffiti', label: 'Graffiti' },
+    { value: 'pixel', label: 'Pixel' },
+    { value: 'rounded', label: 'Redondeada' },
+    { value: 'grunge', label: 'Grunge (Urbano)' },
+    { value: 'art deco', label: 'Art Deco' },
+    { value: 'decorative', label: 'Decorativa (Genérica)' },
   ];
 
   const getFontClass = (font: FontType | '') => {
@@ -66,6 +76,16 @@ export function SetupWizard({
       case 'fantasy': return "font-['fantasy']";
       case 'handwriting': return "font-['cursive']";
       case 'blackletter': return 'font-serif font-black';
+      case 'stencil': return 'font-mono uppercase';
+      case 'futuristic': return 'font-sans uppercase tracking-widest';
+      case 'retro': return "font-['fantasy']";
+      case 'comic': return "font-['Comic_Sans_MS',_cursive]";
+      case 'calligraphy': return "font-['cursive']";
+      case 'graffiti': return "font-['Impact']";
+      case 'pixel': return 'font-mono';
+      case 'rounded': return 'font-sans';
+      case 'grunge': return 'font-sans';
+      case 'art deco': return 'font-sans uppercase';
       case 'decorative': return "font-['fantasy'] tracking-wider";
       default: return 'font-sans';
     }
