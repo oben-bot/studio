@@ -45,42 +45,53 @@ export function SetupWizard({
   const fontOptions: { value: FontType; label: string }[] = [
     { value: 'sans-serif', label: 'Sans Serif (Moderna)' },
     { value: 'serif', label: 'Serif (Clásica)' },
-    { value: 'script', label: 'Script (Cursiva)' },
-    { value: 'gothic', label: 'Gótico' },
-    { value: 'display', label: 'Display (Decorativa)' },
-    { value: 'monospace', label: 'Monospace (Máquina de escribir)' },
-    { value: 'fantasy', label: 'Fantasía' },
+    { value: 'script', label: 'Script (Genérica)' },
+    { value: 'elegant-script', label: 'Script (Elegante)' },
+    { value: 'vintage-script', label: 'Script (Vintage)' },
+    { value: 'flowing-cursive', label: 'Cursiva Fluida' },
+    { value: 'calligraphy', label: 'Caligrafía' },
+    { value: 'modern-calligraphy', label: 'Caligrafía Moderna' },
+    { value: 'signature', label: 'Firma' },
     { value: 'handwriting', label: 'Manuscrita' },
+    { value: 'gothic', label: 'Gótico' },
     { value: 'blackletter', label: 'Blackletter (Antigua)' },
+    { value: 'display', label: 'Display (Decorativa)' },
+    { value: 'decorative', label: 'Decorativa (Genérica)' },
+    { value: 'art deco', label: 'Art Deco' },
+    { value: 'grunge', label: 'Grunge (Urbano)' },
     { value: 'stencil', label: 'Stencil (Plantilla)' },
+    { value: 'graffiti', label: 'Graffiti' },
     { value: 'futuristic', label: 'Futurista' },
     { value: 'retro', label: 'Retro' },
+    { value: 'monospace', label: 'Monospace (Máquina de escribir)' },
     { value: 'comic', label: 'Comic' },
-    { value: 'calligraphy', label: 'Caligrafía' },
-    { value: 'graffiti', label: 'Graffiti' },
     { value: 'pixel', label: 'Pixel' },
     { value: 'rounded', label: 'Redondeada' },
-    { value: 'grunge', label: 'Grunge (Urbano)' },
-    { value: 'art deco', label: 'Art Deco' },
-    { value: 'decorative', label: 'Decorativa (Genérica)' },
+    { value: 'fantasy', label: 'Fantasía' },
   ];
 
   const getFontClass = (font: FontType | '') => {
     switch (font) {
       case 'sans-serif': return 'font-sans';
       case 'serif': return 'font-serif';
-      case 'script': return "font-['cursive']";
+      case 'script':
+      case 'elegant-script':
+      case 'vintage-script':
+      case 'flowing-cursive':
+      case 'calligraphy':
+      case 'modern-calligraphy':
+      case 'signature':
+      case 'handwriting':
+        return "font-['cursive']";
       case 'gothic': return 'font-semibold tracking-wider';
       case 'display': return 'font-bold tracking-widest';
       case 'monospace': return 'font-mono';
       case 'fantasy': return "font-['fantasy']";
-      case 'handwriting': return "font-['cursive']";
       case 'blackletter': return 'font-serif font-black';
       case 'stencil': return 'font-mono uppercase';
       case 'futuristic': return 'font-sans uppercase tracking-widest';
       case 'retro': return "font-['fantasy']";
       case 'comic': return "font-['Comic_Sans_MS',_cursive]";
-      case 'calligraphy': return "font-['cursive']";
       case 'graffiti': return "font-['Impact']";
       case 'pixel': return 'font-mono';
       case 'rounded': return 'font-sans';

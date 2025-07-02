@@ -65,10 +65,16 @@ const agentOrchestrationFlow = ai.defineFlow(
     outputSchema: AgentFlowOutputSchema,
   },
   async (input) => {
-    // Step 1: Classify intent of the user's prompt.
-    const { output: intentOutput } = await intentClassificationPrompt({ prompt: input.prompt });
-    // Default to 'chat' if classification fails for any reason.
-    const intent = intentOutput?.intent || 'chat';
+    let intent: 'generate_design' | 'chat' | 'unknown';
+    try {
+      // Step 1: Classify intent of the user's prompt.
+      const { output: intentOutput } = await intentClassificationPrompt({ prompt: input.prompt });
+      // Default to 'chat' if classification fails for any reason.
+      intent = intentOutput?.intent || 'chat';
+    } catch (error) {
+      console.error("Intent classification failed, defaulting to chat.", error);
+      intent = 'chat';
+    }
 
     // Path 1: User wants to generate a new design.
     if (intent === 'generate_design') {
