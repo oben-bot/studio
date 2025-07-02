@@ -72,6 +72,7 @@ const agentOrchestrationFlow = ai.defineFlow(
 
     // Path 1: User wants to generate a new design.
     if (intent === 'generate_design') {
+      try {
         // Construct the prompt for image generation, including font style if provided.
         let generationPrompt = `Generate a clean, high-contrast, black-on-white line art image suitable for vectorization and laser cutting, based on the following description: "${input.prompt}".`;
         if (input.font) {
@@ -101,28 +102,32 @@ const agentOrchestrationFlow = ai.defineFlow(
             singlePath: input.singlePath,
         };
 
-        try {
-            const vectorizationResult = await vectorizeImage(vectorizeInput);
+        const vectorizationResult = await vectorizeImage(vectorizeInput);
 
-            if (!vectorizationResult.svgString) {
-                return { textResponse: "Lo siento, pude generar la imagen pero fallé al vectorizarla. ¿Intentamos de nuevo?" };
-            }
-            
-            // Step 2c: Return the SVG and a canned text response.
-            return {
-                svgString: vectorizationResult.svgString,
-                textResponse: '¡Claro! Aquí está tu diseño. Puedes pedirme ajustes en el chat.',
-            };
-        } catch (error) {
-            console.error("Vectorization failed:", error);
-            return { textResponse: "Pude generar la imagen, pero hubo un problema técnico al convertirla a un vector. Puedes intentarlo de nuevo con otros ajustes de vectorización o una idea diferente." };
+        if (!vectorizationResult.svgString) {
+            return { textResponse: "Lo siento, pude generar la imagen pero fallé al vectorizarla. ¿Intentamos de nuevo?" };
         }
+        
+        // Step 2c: Return the SVG and a canned text response.
+        return {
+            svgString: vectorizationResult.svgString,
+            textResponse: '¡Claro! Aquí está tu diseño. Puedes pedirme ajustes en el chat.',
+        };
+      } catch (error) {
+        console.error("Design generation or vectorization failed:", error);
+        return { textResponse: "Lo siento, hubo un problema técnico al generar tu diseño. Esto puede ocurrir si la descripción es muy compleja o si hay un problema temporal. Por favor, intenta con una idea más simple o inténtalo de nuevo más tarde." };
+      }
 
     } else { // Path 2: 'chat' or 'unknown' intent.
+      try {
         const { output: chatOutput } = await chatPrompt({ prompt: input.prompt });
         return {
             textResponse: chatOutput?.response || 'No estoy seguro de cómo responder a eso. ¿Puedes reformularlo?',
         };
+      } catch (error) {
+          console.error("Chat prompt failed:", error);
+          return { textResponse: "Lo siento, estoy teniendo problemas para responder en este momento. Por favor, inténtalo de nuevo." };
+      }
     }
   }
 );
