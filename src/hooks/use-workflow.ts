@@ -89,7 +89,7 @@ export function useWorkflow() {
     };
      reader.onerror = (error) => {
       console.error("Error reading file:", error);
-      const errorMessage = { role: 'assistant', content: 'Ocurrió un error al leer el archivo.' };
+      const errorMessage: ChatMessage = { role: 'assistant', content: 'Ocurrió un error al leer el archivo.' };
       setChatMessages(prev => [...prev, errorMessage]);
       setIsProcessing(false);
       setSelectedFile(null);
@@ -177,18 +177,25 @@ export function useWorkflow() {
   };
 
   const handleSetupGenerate = () => {
-    // If a file is selected and the flow is not text-only ('nombre'), process the image.
-    if (selectedFile && !(workType === 'corte' && corteSubType === 'nombre')) {
+    // If a file is selected and the flow is primarily image-based, process the image.
+    if (selectedFile) {
+      const isImageFlow = (workType === 'corte' && corteSubType !== 'nombre') ||
+                           workType === 'corte-grabado' ||
+                           workType === 'grabado' ||
+                           (workType === '3d' && threeDSubType === 'existente');
+      if (isImageFlow) {
         processImageFile(selectedFile);
         return;
+      }
     }
-
+    
     let prompt = '';
-    // For text prompts, we build a simple, direct prompt in English for the AI.
+    let userFacingPrompt = textInput;
+
+    // For text prompts, we build a simple, direct prompt for the AI.
     if (workType === 'corte') {
         if (corteSubType === 'nombre') {
-          // For names, the prompt is just the text itself. The font is a separate parameter.
-          prompt = textInput; 
+          prompt = textInput; // For names, the prompt is just the text itself. The font is a separate parameter.
         }
         else if (corteSubType === 'figura') prompt = `A simple figure of ${textInput} for laser cutting, like a silhouette or stencil.`;
         else if (corteSubType === 'contorno') prompt = `The outline of ${textInput} for laser cutting.`;
@@ -201,9 +208,8 @@ export function useWorkflow() {
         prompt = `A design of ${textInput} that simulates a layered 3D effect for laser cutting.`;
     }
     
-    if (prompt) {
-        // We pass the engineered prompt to the AI, but show the user's original text input in the chat.
-        processTextPrompt(prompt, textInput);
+    if (prompt.trim()) {
+        processTextPrompt(prompt, userFacingPrompt);
     } else if (selectedFile) { // Fallback to image processing if no text prompt was built but a file exists
         processImageFile(selectedFile);
     }
