@@ -21,6 +21,7 @@ const AgentFlowInputSchema = z.object({
   removeBackground: z.boolean(),
   singlePath: z.boolean(),
   font: z.string().optional().describe('The selected font style for text generation (e.g., sans-serif, gothic, script).'),
+  intent: z.enum(['generate_design', 'chat']).describe("The explicit intent from the client, either to generate a new design or to chat."),
 });
 export type AgentFlowInput = z.infer<typeof AgentFlowInputSchema>;
 
@@ -35,17 +36,6 @@ export type AgentFlowOutput = z.infer<typeof AgentFlowOutputSchema>;
 export async function runAgent(input: AgentFlowInput): Promise<AgentFlowOutput> {
   return agentOrchestrationFlow(input);
 }
-
-// A prompt to classify user intent to avoid complex tool-use logic.
-const intentClassificationPrompt = ai.definePrompt({
-    name: 'intentClassificationPrompt',
-    input: { schema: z.object({ prompt: z.string() }) },
-    output: { schema: z.object({ intent: z.enum(['generate_design', 'chat', 'unknown']) }) },
-    system: `You are an intent classifier for a laser cutting design assistant. Classify the user's prompt into one of the following categories:
-- 'generate_design': The user wants to create, generate, draw, make, or design a visual. This includes requests for modifications that imply a new generation (e.g., "now make it a cat", "do a lion instead"). Examples: "dibuja un perro", "logo para mi empresa", "silueta de un arbol".
-- 'chat': The user is asking a question, greeting, having a general conversation, or asking to modify an existing design. Examples: "hola", "quien eres?", "puedes hacerlo mas grueso?".`,
-    prompt: `User prompt: "{{prompt}}"`
-});
 
 // A prompt for general conversation or simple modification responses.
 const chatPrompt = ai.definePrompt({
@@ -65,22 +55,11 @@ const agentOrchestrationFlow = ai.defineFlow(
     outputSchema: AgentFlowOutputSchema,
   },
   async (input) => {
-    let intent: 'generate_design' | 'chat' | 'unknown';
-    try {
-      // Step 1: Classify intent of the user's prompt.
-      const { output: intentOutput } = await intentClassificationPrompt({ prompt: input.prompt });
-      // Default to 'chat' if classification fails for any reason.
-      intent = intentOutput?.intent || 'chat';
-    } catch (error) {
-      console.error("Intent classification failed, defaulting to chat.", error);
-      intent = 'chat';
-    }
+    const { intent } = input;
 
     // Path 1: User wants to generate a new design.
     if (intent === 'generate_design') {
       try {
-        // The incoming `input.prompt` is now cleaner and in English.
-        // We can construct a more direct prompt for the image generator.
         let generationPrompt: string;
         
         if (input.font) {
@@ -88,7 +67,7 @@ const agentOrchestrationFlow = ai.defineFlow(
           generationPrompt = `The text "${input.prompt}" in a high-contrast, artistic ${input.font} font style.`;
         } else {
           // For other designs, use the prompt as a description.
-          generationPrompt = input.prompt;
+          generationPrompt = `A simple figure of ${input.prompt} for laser cutting, like a silhouette or stencil.`;
         }
 
         // Add universal instructions for laser cutting optimization.
@@ -97,7 +76,7 @@ const agentOrchestrationFlow = ai.defineFlow(
         // Step 2a: Generate a raster image from the text prompt.
         const { media } = await ai.generate({
             model: 'googleai/gemini-2.0-flash-preview-image-generation',
-            prompt: finalPrompt, // Use the new, cleaner prompt
+            prompt: finalPrompt,
             config: {
                 responseModalities: ['TEXT', 'IMAGE'],
             },
@@ -132,7 +111,7 @@ const agentOrchestrationFlow = ai.defineFlow(
         return { textResponse: "Lo siento, hubo un problema técnico al generar tu diseño. Esto puede ocurrir si la descripción es muy compleja o si hay un problema temporal. Por favor, intenta con una idea más simple o inténtalo de nuevo más tarde." };
       }
 
-    } else { // Path 2: 'chat' or 'unknown' intent.
+    } else { // Path 2: 'chat' intent.
       try {
         const { output: chatOutput } = await chatPrompt({ prompt: input.prompt });
         return {

@@ -3,7 +3,7 @@
 
 import { useState, useRef, FormEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { runAgent } from '@/ai/flows/conversational-flow';
+import { runAgent, AgentFlowInput } from '@/ai/flows/conversational-flow';
 import { vectorizeImage } from '@/ai/flows/vectorize-image-flow';
 import type { ChatMessage, UiMode, WorkType, CorteSubType, ThreeDSubType, FontType } from '@/lib/definitions';
 
@@ -96,8 +96,8 @@ export function useWorkflow() {
     };
   };
 
-  const processTextPrompt = async (prompt: string, userFacingPrompt: string) => {
-    if (!prompt.trim() || isProcessing) return;
+  const processTextPrompt = async (agentInput: AgentFlowInput, userFacingPrompt: string) => {
+    if (!agentInput.prompt.trim() || isProcessing) return;
 
     setIsProcessing(true);
     setSvgResult(null);
@@ -107,14 +107,8 @@ export function useWorkflow() {
     setMode('chat'); // Switch to chat mode
 
     try {
-      const result = await runAgent({
-        prompt: prompt,
-        detailLevel: detailLevel[0],
-        smoothness: smoothness[0],
-        removeBackground,
-        singlePath,
-        font: fontType,
-      });
+      // Set intent directly to 'generate_design'
+      const result = await runAgent({...agentInput, intent: 'generate_design'});
 
       if (result.textResponse) {
         const assistantMessage: ChatMessage = { role: 'assistant', content: result.textResponse };
@@ -134,7 +128,6 @@ export function useWorkflow() {
       toast({ variant: 'destructive', title: 'Error de Generación' });
     } finally {
       setIsProcessing(false);
-      // No clearing textInput so user can re-generate
     }
   }
 
@@ -149,13 +142,15 @@ export function useWorkflow() {
     setIsProcessing(true);
     
     try {
+      // Set intent to 'chat' for follow-up conversations
       const result = await runAgent({
         prompt: currentPrompt,
         detailLevel: detailLevel[0],
         smoothness: smoothness[0],
         removeBackground,
         singlePath,
-        font: fontType, // Pass font type for contextual adjustments
+        font: fontType,
+        intent: 'chat', // Explicitly set intent for chatting
       });
 
       if (result.textResponse) {
@@ -191,26 +186,20 @@ export function useWorkflow() {
     }
     
     // Otherwise, generate from text prompt.
-    let prompt = '';
+    let prompt = textInput;
     let userFacingPrompt = textInput;
-
-    if (workType === 'corte') {
-        if (corteSubType === 'nombre') {
-          prompt = textInput; // For names, the prompt is just the text itself. The font is a separate parameter.
-        }
-        else if (corteSubType === 'figura') prompt = `A simple figure of ${textInput} for laser cutting, like a silhouette or stencil.`;
-        else if (corteSubType === 'contorno') prompt = `The outline of ${textInput} for laser cutting.`;
-        else if (corteSubType === 'forma') prompt = `An abstract shape based on "${textInput}" for laser cutting.`;
-    } else if (workType === 'corte-grabado') {
-        prompt = `A design of "${textInput}" for laser cutting and engraving, with well-defined areas for each process.`;
-    } else if (workType === 'grabado') {
-        prompt = `A detailed design of "${textInput}" for laser engraving.`;
-    } else if (workType === '3d' && threeDSubType === 'nuevo') {
-        prompt = `A design of ${textInput} that simulates a layered 3D effect for laser cutting.`;
-    }
     
     if (prompt.trim()) {
-        processTextPrompt(prompt, userFacingPrompt);
+      const agentInput: AgentFlowInput = {
+        prompt: prompt,
+        detailLevel: detailLevel[0],
+        smoothness: smoothness[0],
+        removeBackground,
+        singlePath,
+        font: fontType || undefined,
+        intent: 'generate_design'
+      };
+      processTextPrompt(agentInput, userFacingPrompt);
     }
   };
 
