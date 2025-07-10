@@ -177,22 +177,23 @@ export function useWorkflow() {
   };
 
   const handleSetupGenerate = () => {
-    // If a file is selected and the flow is primarily image-based, process the image.
-    if (selectedFile) {
-      const isImageFlow = (workType === 'corte' && corteSubType !== 'nombre') ||
-                           workType === 'corte-grabado' ||
-                           workType === 'grabado' ||
-                           (workType === '3d' && threeDSubType === 'existente');
-      if (isImageFlow) {
-        processImageFile(selectedFile);
-        return;
-      }
+    // Determine if the primary input should be a file.
+    const useFile = selectedFile && (
+      (workType === 'corte' && (corteSubType === 'figura' || corteSubType === 'contorno' || corteSubType === 'forma')) ||
+      workType === 'corte-grabado' ||
+      workType === 'grabado' ||
+      (workType === '3d' && threeDSubType === 'existente')
+    );
+
+    if (useFile) {
+      processImageFile(selectedFile);
+      return;
     }
     
+    // Otherwise, generate from text prompt.
     let prompt = '';
     let userFacingPrompt = textInput;
 
-    // For text prompts, we build a simple, direct prompt for the AI.
     if (workType === 'corte') {
         if (corteSubType === 'nombre') {
           prompt = textInput; // For names, the prompt is just the text itself. The font is a separate parameter.
@@ -210,8 +211,6 @@ export function useWorkflow() {
     
     if (prompt.trim()) {
         processTextPrompt(prompt, userFacingPrompt);
-    } else if (selectedFile) { // Fallback to image processing if no text prompt was built but a file exists
-        processImageFile(selectedFile);
     }
   };
 
