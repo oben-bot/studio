@@ -3,11 +3,11 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'OBN Kodex LaserAI',
-  description: 'Tu asistente definitivo para corte y grabado láser.',
+  title: 'Cazador de Oportunidades',
+  description: 'Genera asistentes de IA para capturar leads y oportunidades.',
 };
 
 export default function RootLayout({
@@ -17,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className="dark">
-      <body className={inter.className}>
+      <body className={`${inter.variable} font-sans`}>
         {children}
         <Toaster />
       </body>

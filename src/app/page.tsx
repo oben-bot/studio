@@ -1,25 +1,125 @@
 'use client';
 
-import { Hexagon } from 'lucide-react';
+import { useState } from 'react';
+import { Bot, Info, Send, Upload, Settings, BrainCircuit } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { OpportunityCard } from '@/components/OpportunityCard';
 
 export default function Home() {
+  const [knowledge, setKnowledge] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [messages, setMessages] = useState([
+    { role: 'bot', text: 'Hola! Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?' }
+  ]);
+  const [input, setInput] = useState('');
+
+  const handleSendMessage = () => {
+    if (input.trim() === '') return;
+    setMessages([...messages, { role: 'user', text: input }]);
+    // Aquí iría la lógica de respuesta del bot
+    setTimeout(() => {
+      setMessages(prev => [...prev, { role: 'bot', text: 'Actualmente estoy en desarrollo. Pronto podré responderte usando la información que me proporcionaste.' }]);
+    }, 1000);
+    setInput('');
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Hexagon className="w-8 h-8 text-primary" />
-            <h1 className="text-xl font-bold tracking-tight">OBN Kodex LaserAI</h1>
+            <Bot className="w-8 h-8 text-primary" />
+            <h1 className="text-xl font-bold tracking-tight">Cazador de Oportunidades</h1>
           </div>
+          <Button variant="outline" size="icon">
+            <Settings className="w-5 h-5" />
+          </Button>
         </div>
       </header>
 
-      <main className="flex-grow container mx-auto p-4 md:p-6">
-        <div className="flex items-center justify-center h-full">
-            <div className="text-center text-muted-foreground p-4">
-                <Hexagon className="mx-auto h-16 w-16" />
-                <p className="mt-4">Listo para tu nueva idea.</p>
-            </div>
+      <main className="flex-grow container mx-auto p-4 md:p-6 grid md:grid-cols-2 gap-8">
+        {/* Columna de Configuración */}
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BrainCircuit className="text-primary" />
+                Entrena a tu Asistente
+              </CardTitle>
+              <CardDescription>
+                Proporciona la información con la que tu chatbot atenderá a los clientes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="businessName" className="font-medium">Nombre del Negocio</label>
+                <Input
+                  id="businessName"
+                  placeholder="Ej: Ferretería 'El Martillo Feliz'"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="knowledge" className="font-medium">Base de Conocimiento</label>
+                <Textarea
+                  id="knowledge"
+                  placeholder="Pega aquí la información de tu negocio: horarios, precios, FAQs, etc."
+                  className="h-48"
+                  value={knowledge}
+                  onChange={(e) => setKnowledge(e.target.value)}
+                />
+              </div>
+               <div className="flex gap-2">
+                <Button className="w-full">
+                  <BrainCircuit className="mr-2" />
+                  Entrenar Asistente
+                </Button>
+                <Button variant="outline" className="w-full">
+                  <Upload className="mr-2" />
+                  Subir Archivo
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          <OpportunityCard />
+        </div>
+
+        {/* Columna de Chat */}
+        <div className="flex flex-col">
+           <Card className="flex flex-col flex-grow">
+            <CardHeader>
+              <CardTitle>Vista Previa del Chatbot</CardTitle>
+              <CardDescription>Así interactuarán tus clientes con el asistente.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow flex flex-col">
+              <div className="flex-grow border rounded-lg p-4 space-y-4 overflow-y-auto h-96 bg-muted/20">
+                {messages.map((msg, index) => (
+                  <div key={index} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                    {msg.role === 'bot' && <Bot className="w-6 h-6 text-primary flex-shrink-0" />}
+                    <div className={`rounded-lg px-4 py-2 max-w-sm ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}>
+                      {msg.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex gap-2">
+                <Input
+                  placeholder="Escribe un mensaje..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                />
+                <Button onClick={handleSendMessage}>
+                  <Send className="mr-2" />
+                  Enviar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
