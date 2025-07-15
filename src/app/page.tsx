@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { OpportunityCard } from '@/components/OpportunityCard';
 import mammoth from 'mammoth';
 import pdf from 'pdf-parse/lib/pdf.js/v1.10.100/build/pdf.js';
+
 if (typeof window !== 'undefined') {
   pdf.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js`;
 }
