@@ -1,12 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { Bot, Info, Send, Upload, Settings, BrainCircuit } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Bot, Info, Send, Upload, Settings, BrainCircuit, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { OpportunityCard } from '@/components/OpportunityCard';
+import mammoth from 'mammoth';
+import pdf from 'pdf-parse/lib/pdf.js/v1.10.100/build/pdf.js';
+if (typeof window !== 'undefined') {
+  pdf.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js`;
+}
+
 
 export default function Home() {
   const [knowledge, setKnowledge] = useState('');
@@ -15,6 +21,8 @@ export default function Home() {
     { role: 'bot', text: 'Hola! Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?' }
   ]);
   const [input, setInput] = useState('');
+  const [isTraining, setIsTraining] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSendMessage = () => {
     if (input.trim() === '') return;
@@ -24,6 +32,50 @@ export default function Home() {
       setMessages(prev => [...prev, { role: 'bot', text: 'Actualmente estoy en desarrollo. Pronto podré responderte usando la información que me proporcionaste.' }]);
     }, 1000);
     setInput('');
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsTraining(true);
+    let textContent = '';
+
+    try {
+      if (file.type === 'application/pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdfData = await pdf.getDocument({data: arrayBuffer}).promise;
+        const numPages = pdfData.numPages;
+        let fullText = '';
+        for (let i = 1; i <= numPages; i++) {
+          const page = await pdfData.getPage(i);
+          const textContent = await page.getTextContent();
+          fullText += textContent.items.map(item => (item as any).str).join(' ');
+        }
+        textContent = fullText;
+      } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        textContent = result.value;
+      } else {
+        // Fallback for plain text files
+        textContent = await file.text();
+      }
+      setKnowledge(prev => prev ? `${prev}\n\n--- Contenido de ${file.name} ---\n${textContent}` : `--- Contenido de ${file.name} ---\n${textContent}`);
+    } catch (error) {
+      console.error('Error processing file:', error);
+      // You can add a toast notification here to inform the user
+    } finally {
+      setIsTraining(false);
+       if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -74,14 +126,21 @@ export default function Home() {
                 />
               </div>
                <div className="flex gap-2">
-                <Button className="w-full">
-                  <BrainCircuit className="mr-2" />
+                <Button className="w-full" disabled={isTraining}>
+                  {isTraining ? <Loader2 className="mr-2 animate-spin" /> : <BrainCircuit className="mr-2" />}
                   Entrenar Asistente
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" onClick={handleUploadClick} disabled={isTraining}>
                   <Upload className="mr-2" />
                   Subir Archivo
                 </Button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  accept=".txt,.md,.pdf,.docx"
+                />
               </div>
             </CardContent>
           </Card>
