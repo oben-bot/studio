@@ -18,6 +18,24 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+        config.resolve.fallback = {
+            ...config.resolve.fallback,
+            fs: false,
+        };
+    }
+
+    config.module.rules.push({
+        test: /pdf\.worker\.js$/,
+        type: 'asset/resource',
+        generator: {
+            filename: 'static/chunks/[name].[hash][ext]'
+        }
+    });
+
+    return config;
+  },
 };
 
 export default nextConfig;

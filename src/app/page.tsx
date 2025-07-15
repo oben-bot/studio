@@ -8,10 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { OpportunityCard } from '@/components/OpportunityCard';
 import mammoth from 'mammoth';
-import pdf from 'pdf-parse/lib/pdf.js/v1.10.100/build/pdf.js';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf';
 
 if (typeof window !== 'undefined') {
-  pdf.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js`;
 }
 
 
@@ -45,11 +45,11 @@ export default function Home() {
     try {
       if (file.type === 'application/pdf') {
         const arrayBuffer = await file.arrayBuffer();
-        const pdfData = await pdf.getDocument({data: arrayBuffer}).promise;
-        const numPages = pdfData.numPages;
+        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+        const numPages = pdf.numPages;
         let fullText = '';
         for (let i = 1; i <= numPages; i++) {
-          const page = await pdfData.getPage(i);
+          const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
           fullText += textContent.items.map(item => (item as any).str).join(' ');
         }
