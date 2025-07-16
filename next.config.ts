@@ -18,13 +18,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, {isServer}) => {
     // Exclude server-side modules from client-side bundle
     if (!isServer) {
-        config.resolve.fallback = {
-            ...config.resolve.fallback,
-            fs: false, // fs is a server-side module
-        };
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false, // fs is a server-side module
+      };
     }
 
     // `canvas` is a server-side dependency of pdfjs-dist, we don't need it for client-side rendering
