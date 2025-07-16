@@ -30,15 +30,6 @@ const nextConfig: NextConfig = {
     // `canvas` is a server-side dependency of pdfjs-dist, we don't need it for client-side rendering
     config.externals.push('canvas');
 
-    // Rule to handle pdf.worker.js, to copy it to the build output
-    config.module.rules.push({
-        test: /pdf\.worker\.min\.js$/,
-        type: 'asset/resource',
-        generator: {
-            filename: 'static/chunks/[name].[hash][ext]'
-        }
-    });
-
     return config;
   },
 };

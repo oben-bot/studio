@@ -12,10 +12,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 
 // Configure the workerSrc to point to the local copy that next.config.ts will provide
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.js',
-    import.meta.url
-  ).toString();
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 }
 
 export default function Home() {
