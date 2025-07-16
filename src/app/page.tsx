@@ -10,6 +10,7 @@ import { OpportunityCard } from '@/components/OpportunityCard';
 import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
 
+// Configure the workerSrc to point to the local copy that next.config.ts will provide
 if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
     'pdfjs-dist/build/pdf.worker.min.js',
