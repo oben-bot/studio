@@ -14,10 +14,9 @@ import * as pdfjsLib from 'pdfjs-dist';
 if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
     'pdfjs-dist/build/pdf.worker.min.js',
-    import.meta.url,
+    import.meta.url
   ).toString();
 }
-
 
 export default function Home() {
   const [knowledge, setKnowledge] = useState('');
@@ -77,7 +76,6 @@ export default function Home() {
       }
     }
   };
-
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
