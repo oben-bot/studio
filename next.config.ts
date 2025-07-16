@@ -25,6 +25,7 @@ const nextConfig: NextConfig = {
             fs: false,
         };
     }
+    config.externals.push('canvas');
 
     config.module.rules.push({
         test: /pdf\.worker\.js$/,

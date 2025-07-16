@@ -8,10 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { OpportunityCard } from '@/components/OpportunityCard';
 import mammoth from 'mammoth';
-import * as pdfjsLib from 'pdfjs-dist/build/pdf';
+import * as pdfjsLib from 'pdfjs-dist';
 
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.js',
+    import.meta.url,
+  ).toString();
 }
 
 
@@ -51,7 +54,7 @@ export default function Home() {
         for (let i = 1; i <= numPages; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
-          fullText += textContent.items.map(item => (item as any).str).join(' ');
+          fullText += textContent.items.map(item => ('str' in item ? item.str : '')).join(' ');
         }
         textContent = fullText;
       } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
