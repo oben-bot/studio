@@ -11,7 +11,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { chatbotFlow, type ChatMessage } from '@/ai/flows/chatbotFlow';
 import { useToast } from "@/hooks/use-toast";
 
-// Configure the workerSrc to point to the local copy that next.config.ts will provide
+// Configure the workerSrc to point to the local copy.
 if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 }
