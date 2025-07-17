@@ -19,7 +19,7 @@ if (typeof window !== 'undefined') {
 
 export default function Home() {
   const [knowledge, setKnowledge] = useState('');
-  const [businessName, setBusinessName] = useState('');
+  const [businessName, setBusinessName] = useState('IA autónoma');
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'bot', content: 'Hola! Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?' }
   ]);
@@ -152,7 +152,7 @@ export default function Home() {
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Bot className="w-8 h-8 text-primary" />
-            <h1 className="text-xl font-bold tracking-tight">Cazador de Oportunidades</h1>
+            <h1 className="text-xl font-bold tracking-tight">IA autónoma</h1>
           </div>
           <Button variant="outline" size="icon">
             <Settings className="w-5 h-5" />
