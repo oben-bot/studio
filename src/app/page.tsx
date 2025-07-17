@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2 } from 'lucide-react';
+import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
 import { chatbotFlow } from '@/ai/flows/chatbotFlow';
+import { imageToTextFlow } from '@/ai/flows/imageToTextFlow';
 import { type ChatMessage } from '@/ai/flows/schemas';
 import { useToast } from "@/hooks/use-toast";
 
@@ -16,6 +17,17 @@ import { useToast } from "@/hooks/use-toast";
 if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 }
+
+// Helper function to convert file to data URI
+const fileToDataUri = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
 
 export default function Home() {
   const [knowledge, setKnowledge] = useState('');
@@ -84,7 +96,11 @@ export default function Home() {
     let textContent = '';
 
     try {
-      if (file.type === 'application/pdf') {
+      if (file.type.startsWith('image/')) {
+        const dataUri = await fileToDataUri(file);
+        const extractedText = await imageToTextFlow({ photoDataUri: dataUri });
+        textContent = extractedText;
+      } else if (file.type === 'application/pdf') {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
         const numPages = pdf.numPages;
@@ -199,14 +215,14 @@ export default function Home() {
                 </Button>
                 <Button variant="outline" className="w-full" onClick={handleUploadClick} disabled={isTraining}>
                   {isTraining ? <Loader2 className="mr-2 animate-spin" /> : <Upload className="mr-2" />}
-                  Subir Archivo
+                  Subir Archivo/Imagen
                 </Button>
                 <input
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   className="hidden"
-                  accept=".txt,.md,.pdf,.docx"
+                  accept=".txt,.md,.pdf,.docx,image/png,image/jpeg,image/jpg"
                 />
               </div>
             </CardContent>
@@ -258,3 +274,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
