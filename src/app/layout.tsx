@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'BotForge',
+  title: 'Cazador de Oportunidades',
   description: 'Crea y entrena asistentes de IA personalizados para tu negocio.',
 };
 
