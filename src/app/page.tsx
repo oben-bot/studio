@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
-import { chatbotFlow, type ChatMessage } from '@/ai/flows/chatbotFlow';
+import { chatbotFlow } from '@/ai/flows/chatbotFlow';
+import { type ChatMessage } from '@/ai/flows/schemas';
 import { useToast } from "@/hooks/use-toast";
 
 // Configure the workerSrc to point to the local copy.

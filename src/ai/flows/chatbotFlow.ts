@@ -3,25 +3,10 @@
  * @fileOverview A chatbot flow for the BotForge application.
  *
  * - chatbotFlow - A function that generates a chatbot response.
- * - ChatbotInput - The input type for the chatbotFlow function.
- * - ChatMessage - The type for a single chat message.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-
-export const ChatMessageSchema = z.object({
-  role: z.enum(['user', 'bot']),
-  content: z.string(),
-});
-export type ChatMessage = z.infer<typeof ChatMessageSchema>;
-
-export const ChatbotInputSchema = z.object({
-  history: z.array(ChatMessageSchema).describe('The chat history.'),
-  knowledge: z.string().describe('The knowledge base for the business.'),
-  businessName: z.string().describe('The name of the business.'),
-});
-export type ChatbotInput = z.infer<typeof ChatbotInputSchema>;
+import { ChatbotInput, ChatbotInputSchema, ChatMessageSchema } from './schemas';
 
 const prompt = `
 You are a customer service chatbot for a business called "{{businessName}}".
