@@ -21,7 +21,7 @@ export type ImageToTextInput = z.infer<typeof ImageToTextInputSchema>;
 
 export async function imageToTextFlow(input: ImageToTextInput): Promise<string> {
   const llmResponse = await ai.generate({
-    model: 'googleai/gemini-pro-vision',
+    model: 'googleai/gemini-1.5-flash',
     prompt: [
         { text: 'Extract all visible text from this image. If there is no text, describe the image briefly.' },
         { media: { url: input.photoDataUri } },
