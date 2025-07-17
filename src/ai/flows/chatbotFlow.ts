@@ -8,7 +8,7 @@
 import { ai } from '@/ai/genkit';
 import { type ChatbotInput } from './schemas';
 
-const prompt = `
+const promptTemplate = `
 Eres un chatbot de servicio al cliente para un negocio llamado "{{businessName}}".
 Tu personalidad debe ser servicial, amigable y profesional.
 Tu objetivo es responder a las preguntas de los clientes basándote *únicamente* en la información proporcionada en la "BASE DE CONOCIMIENTO" a continuación.
@@ -21,16 +21,12 @@ BASE DE CONOCIMIENTO:
 {{knowledge}}
 ---
 
-Este es el historial de la conversación con el usuario hasta ahora:
-{{#each history}}
-{{role}}: {{content}}
-{{/each}}
-bot:
+Basado en la conversación hasta ahora y la base de conocimiento, responde a la última pregunta del usuario.
 `;
 
 export async function chatbotFlow(input: ChatbotInput): Promise<string> {
   const llmResponse = await ai.generate({
-    prompt: prompt,
+    prompt: promptTemplate,
     history: input.history,
     input: {
       businessName: input.businessName,
