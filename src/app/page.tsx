@@ -31,7 +31,7 @@ const fileToDataUri = (file: File): Promise<string> => {
 
 export default function Home() {
   const [knowledge, setKnowledge] = useState('');
-  const [businessName, setBusinessName] = useState('IA autónoma');
+  const [businessName, setBusinessName] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'bot', content: 'Hola! Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?' }
   ]);
@@ -274,5 +274,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
