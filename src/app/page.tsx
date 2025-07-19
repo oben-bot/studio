@@ -1,16 +1,15 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2 } from 'lucide-react';
+import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
-import { aiChatbot } from '@/ai/flows/chatbotFlow';
+import { refineKnowledgeFlow } from '@/ai/flows/refineKnowledgeFlow';
 import { imageToTextFlow } from '@/ai/flows/imageToTextFlow';
-import { type ChatMessage } from '@/ai/flows/schemas';
 import { useToast } from "@/hooks/use-toast";
 
 if (typeof window !== 'undefined') {
@@ -30,70 +29,17 @@ const fileToDataUri = (file: File): Promise<string> => {
 export default function Home() {
   const [knowledge, setKnowledge] = useState('');
   const [businessName, setBusinessName] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', text: 'Hola! Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?' }
-  ]);
-  const [input, setInput] = useState('');
-  const [isTraining, setIsTraining] = useState(false);
-  const [isResponding, setIsResponding] = useState(false);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [isRefining, setIsRefining] = useState(false);
+  const [refineInput, setRefineInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const userId = useRef<string>(`user_${Date.now()}`);
-
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  const handleSendMessage = async () => {
-    if (input.trim() === '') return;
-
-    const userMessage: ChatMessage = { role: 'user', text: input };
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsResponding(true);
-
-    try {
-      if (!knowledge.trim() || !businessName.trim()) {
-        toast({
-          title: "Información Requerida",
-          description: "Por favor, ingresa el nombre del negocio y la base de conocimiento.",
-          variant: "destructive",
-        });
-        setMessages(prev => [...prev, { role: 'assistant', text: 'Por favor, completa la información del negocio y la base de conocimiento para que pueda ayudarte.' }]);
-        setIsResponding(false);
-        return;
-      }
-      
-      const response = await aiChatbot({
-        userId: userId.current,
-        currentMessageText: input,
-        chatHistory: messages,
-        businessName,
-        knowledge,
-      });
-
-      setMessages(prev => [...prev, { role: 'assistant', text: response.response }]);
-    } catch (error) {
-      console.error('Error getting response from bot:', error);
-       toast({
-          title: "Error del Asistente",
-          description: "No se pudo obtener una respuesta. Por favor, inténtalo de nuevo.",
-          variant: "destructive",
-        });
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Lo siento, tuve un problema al procesar tu solicitud.' }]);
-    } finally {
-      setIsResponding(false);
-    }
-  };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setIsTraining(true);
+    setIsProcessingFile(true);
     let textContent = '';
 
     try {
@@ -132,7 +78,7 @@ export default function Home() {
           variant: "destructive",
         });
     } finally {
-      setIsTraining(false);
+      setIsProcessingFile(false);
        if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -142,25 +88,45 @@ export default function Home() {
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
+
+  const handleRefineKnowledge = async () => {
+    if (!refineInput.trim()) return;
+
+    setIsRefining(true);
+    try {
+      const result = await refineKnowledgeFlow({ rawText: refineInput });
+      setKnowledge(prev => prev ? `${prev}\n\n${result.refinedText}` : result.refinedText);
+      setRefineInput('');
+      toast({
+        title: "Base de Conocimiento Refinada",
+        description: "El texto ha sido mejorado y añadido a la base de conocimiento.",
+      });
+    } catch (error) {
+      console.error('Error refining knowledge:', error);
+      toast({
+        title: "Error al Refinar",
+        description: "No se pudo procesar el texto. Por favor, inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefining(false);
+    }
+  };
   
   const handleTrain = () => {
      if (!knowledge.trim() || !businessName.trim()) {
         toast({
           title: "Información Requerida",
-          description: "Por favor, ingresa el nombre del negocio y la base de conocimiento.",
+          description: "Por favor, ingresa el nombre del negocio y la base de conocimiento antes de continuar.",
           variant: "destructive",
         });
         return;
       }
       
       toast({
-        title: "Asistente Listo",
-        description: "La base de conocimiento está cargada. ¡Puedes empezar a chatear!",
+        title: "Asistente Listo para Probar",
+        description: "La base de conocimiento está cargada. Ahora puedes simular una conversación o desplegar tu chatbot.",
       });
-
-      setMessages([
-        { role: 'assistant', text: `¡Hola! Soy el asistente de ${businessName}. ¿Cómo puedo ayudarte?` }
-      ]);
   }
 
   return (
@@ -169,7 +135,7 @@ export default function Home() {
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Bot className="w-8 h-8 text-primary" />
-            <h1 className="text-xl font-bold tracking-tight">IA autónoma</h1>
+            <h1 className="text-xl font-bold tracking-tight">Creador de IA autónoma</h1>
           </div>
           <Button variant="outline" size="icon">
             <Settings className="w-5 h-5" />
@@ -179,17 +145,17 @@ export default function Home() {
 
       <main className="flex-grow container mx-auto p-4 md:p-6 grid md:grid-cols-2 gap-8">
         <div className="flex flex-col gap-6">
-          <Card>
+          <Card className="flex-grow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BrainCircuit className="text-primary" />
-                Entrena a tu Asistente
+                Crea tu Asistente
               </CardTitle>
               <CardDescription>
                 Proporciona la información con la que tu chatbot atenderá a los clientes.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 flex flex-col flex-grow">
               <div className="space-y-2">
                 <label htmlFor="businessName" className="font-medium">Nombre del Negocio</label>
                 <Input
@@ -199,23 +165,23 @@ export default function Home() {
                   onChange={(e) => setBusinessName(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 flex-grow flex flex-col">
                 <label htmlFor="knowledge" className="font-medium">Base de Conocimiento</label>
                 <Textarea
                   id="knowledge"
-                  placeholder="Pega aquí la información de tu negocio: horarios, precios, FAQs, etc."
-                  className="h-48"
+                  placeholder="Pega aquí la información de tu negocio, sube un archivo o usa el asistente de la derecha para refinarla."
+                  className="flex-grow"
                   value={knowledge}
                   onChange={(e) => setKnowledge(e.target.value)}
                 />
               </div>
-               <div className="flex gap-2">
-                <Button className="w-full" onClick={handleTrain} disabled={isTraining}>
-                  {isTraining ? <Loader2 className="mr-2 animate-spin" /> : <BrainCircuit className="mr-2" />}
-                  Entrenar Asistente
+               <div className="flex flex-col sm:flex-row gap-2">
+                <Button className="w-full" onClick={handleTrain} disabled={isProcessingFile}>
+                  {isProcessingFile ? <Loader2 className="mr-2 animate-spin" /> : <BrainCircuit className="mr-2" />}
+                  Guardar y Probar
                 </Button>
-                <Button variant="outline" className="w-full" onClick={handleUploadClick} disabled={isTraining}>
-                  {isTraining ? <Loader2 className="mr-2 animate-spin" /> : <Upload className="mr-2" />}
+                <Button variant="outline" className="w-full" onClick={handleUploadClick} disabled={isProcessingFile}>
+                  {isProcessingFile ? <Loader2 className="mr-2 animate-spin" /> : <Upload className="mr-2" />}
                   Subir Archivo/Imagen
                 </Button>
                 <input
@@ -233,39 +199,27 @@ export default function Home() {
         <div className="flex flex-col">
            <Card className="flex flex-col flex-grow">
             <CardHeader>
-              <CardTitle>Vista Previa del Chatbot</CardTitle>
-              <CardDescription>Así interactuarán tus clientes con el asistente.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Wand2 className="text-primary" />
+                Asistente de Creación
+              </CardTitle>
+              <CardDescription>Usa esta IA para refinar y estructurar la información para tu chatbot.</CardDescription>
             </CardHeader>
             <CardContent className="flex-grow flex flex-col">
-              <div ref={chatContainerRef} className="flex-grow border rounded-lg p-4 space-y-4 overflow-y-auto h-96 bg-muted/20">
-                {messages.map((msg, index) => (
-                  <div key={index} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                    {msg.role === 'assistant' && <Bot className="w-6 h-6 text-primary flex-shrink-0" />}
-                    <div className={`rounded-lg px-4 py-2 max-w-sm ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}>
-                      <p className="whitespace-pre-wrap">{msg.text}</p>
-                    </div>
-                     {msg.role === 'user' && <User className="w-6 h-6 text-primary flex-shrink-0" />}
-                  </div>
-                ))}
-                 {isResponding && (
-                    <div className="flex items-end gap-2">
-                      <Bot className="w-6 h-6 text-primary flex-shrink-0" />
-                      <div className="rounded-lg px-4 py-2 max-w-sm bg-secondary">
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      </div>
-                    </div>
-                  )}
+               <div className="space-y-2 flex-grow flex flex-col">
+                 <label htmlFor="refineInput" className="font-medium">Borrador de Información</label>
+                <Textarea
+                  id="refineInput"
+                  placeholder="Escribe tus ideas, FAQs o descripción de servicios aquí. Luego, presiona 'Refinar' para que la IA lo mejore y lo agregue a la Base de Conocimiento."
+                  className="flex-grow h-72"
+                  value={refineInput}
+                  onChange={(e) => setRefineInput(e.target.value)}
+                />
               </div>
               <div className="mt-4 flex gap-2">
-                <Input
-                  placeholder="Escribe un mensaje..."
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && !isResponding && handleSendMessage()}
-                  disabled={isResponding}
-                />
-                <Button onClick={handleSendMessage} disabled={isResponding}>
-                  {isResponding ? <Loader2 className="animate-spin" /> : <Send />}
+                <Button className="w-full" onClick={handleRefineKnowledge} disabled={isRefining}>
+                  {isRefining ? <Loader2 className="animate-spin" /> : <Wand2 />}
+                  Refinar y Añadir
                 </Button>
               </div>
             </CardContent>
