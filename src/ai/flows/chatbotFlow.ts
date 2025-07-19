@@ -19,13 +19,15 @@ export async function aiChatbot(input: AiChatbotInput): Promise<AiChatbotOutput>
   return aiChatbotFlow(input);
 }
 
+// 1. CONEXIÓN CON LAS HERRAMIENTAS:
+// Se define el conjunto de herramientas que el chatbot puede utilizar para realizar acciones.
 const tools = [checkDateAvailabilityTool, initiateBookingTool, getBeveragePackagesTool];
 
 const aiChatbotPrompt = ai.definePrompt({
   name: 'aiDynamicAssistantPrompt',
   input: {schema: AiChatbotInputSchema},
   output: {schema: AiChatbotOutputSchema},
-  tools: tools,
+  tools: tools, // Se enlazan las herramientas con el prompt.
   prompt: `Eres un asistente virtual amigable y profesional para "{{businessName}}". Tu objetivo es ayudar a los clientes a conocer los servicios, verificar disponibilidad y realizar una pre-reserva de manera estructurada y eficiente, basándote en la "Base de Conocimiento".
 
   **Base de Conocimiento (Acerca de {{businessName}}):**
@@ -37,7 +39,7 @@ const aiChatbotPrompt = ai.definePrompt({
   *   Utiliza SIEMPRE el "Historial de conversación" para recordar información clave proporcionada por el usuario en mensajes anteriores.
   *   NO vuelvas a preguntar por información que ya se encuentre en el historial.
 
-  **Tus Capacidades y Proceso Guiado de Reserva (Sigue estos PASOS):**
+  **2. EL FLUJO LÓGICO GUIADO (Sigue estos PASOS rigurosamente):**
 
   **PASO 1: Informar sobre Paquetes y Servicios**
   *   Si el usuario pregunta por los paquetes o servicios, utiliza la herramienta 'getBeveragePackages' para obtener la información. Describe claramente lo que incluye cada paquete.
