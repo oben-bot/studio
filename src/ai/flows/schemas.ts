@@ -4,14 +4,21 @@
 import { z } from 'zod';
 
 export const ChatMessageSchema = z.object({
-  role: z.enum(['user', 'bot']),
-  content: z.string(),
+  role: z.enum(['user', 'assistant']),
+  text: z.string(),
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
-export const ChatbotInputSchema = z.object({
-  history: z.array(ChatMessageSchema).describe('The chat history.'),
-  knowledge: z.string().describe('The knowledge base for the business.'),
-  businessName: z.string().describe('The name of the business.'),
+export const AiChatbotInputSchema = z.object({
+  userId: z.string().describe('El ID del usuario.'),
+  currentMessageText: z.string().describe('El mensaje actual del usuario.'),
+  chatHistory: z.array(ChatMessageSchema).optional().describe('El historial de la conversación.'),
+  businessName: z.string().describe('El nombre del negocio para el que actúa el chatbot.'),
+  knowledge: z.string().describe('La base de conocimiento sobre el negocio.'),
 });
-export type ChatbotInput = z.infer<typeof ChatbotInputSchema>;
+export type AiChatbotInput = z.infer<typeof AiChatbotInputSchema>;
+
+export const AiChatbotOutputSchema = z.object({
+  response: z.string().describe('La respuesta del chatbot.'),
+});
+export type AiChatbotOutput = z.infer<typeof AiChatbotOutputSchema>;

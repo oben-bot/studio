@@ -1,24 +1,22 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
-import { chatbotFlow } from '@/ai/flows/chatbotFlow';
+import { aiChatbot } from '@/ai/flows/chatbotFlow';
 import { imageToTextFlow } from '@/ai/flows/imageToTextFlow';
 import { type ChatMessage } from '@/ai/flows/schemas';
 import { useToast } from "@/hooks/use-toast";
 
-// Configure the workerSrc to point to the local copy.
 if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 }
 
-// Helper function to convert file to data URI
 const fileToDataUri = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -33,7 +31,7 @@ export default function Home() {
   const [knowledge, setKnowledge] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'bot', content: 'Hola! Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?' }
+    { role: 'assistant', text: 'Hola! Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?' }
   ]);
   const [input, setInput] = useState('');
   const [isTraining, setIsTraining] = useState(false);
@@ -41,6 +39,7 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const userId = useRef<string>(`user_${Date.now()}`);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -51,7 +50,7 @@ export default function Home() {
   const handleSendMessage = async () => {
     if (input.trim() === '') return;
 
-    const userMessage: ChatMessage = { role: 'user', content: input };
+    const userMessage: ChatMessage = { role: 'user', text: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsResponding(true);
@@ -63,18 +62,20 @@ export default function Home() {
           description: "Por favor, ingresa el nombre del negocio y la base de conocimiento.",
           variant: "destructive",
         });
-        setMessages(prev => [...prev, { role: 'bot', content: 'Por favor, completa la información del negocio y la base de conocimiento para que pueda ayudarte.' }]);
-        setIsResponding(false); // Detener la carga si falta información
+        setMessages(prev => [...prev, { role: 'assistant', text: 'Por favor, completa la información del negocio y la base de conocimiento para que pueda ayudarte.' }]);
+        setIsResponding(false);
         return;
       }
       
-      const response = await chatbotFlow({
-        history: [...messages, userMessage],
-        knowledge,
+      const response = await aiChatbot({
+        userId: userId.current,
+        currentMessageText: input,
+        chatHistory: messages,
         businessName,
+        knowledge,
       });
 
-      setMessages(prev => [...prev, { role: 'bot', content: response }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: response.response }]);
     } catch (error) {
       console.error('Error getting response from bot:', error);
        toast({
@@ -82,7 +83,7 @@ export default function Home() {
           description: "No se pudo obtener una respuesta. Por favor, inténtalo de nuevo.",
           variant: "destructive",
         });
-      setMessages(prev => [...prev, { role: 'bot', content: 'Lo siento, tuve un problema al procesar tu solicitud.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: 'Lo siento, tuve un problema al procesar tu solicitud.' }]);
     } finally {
       setIsResponding(false);
     }
@@ -158,7 +159,7 @@ export default function Home() {
       });
 
       setMessages([
-        { role: 'bot', content: `¡Hola! Soy el asistente de ${businessName}. ¿Cómo puedo ayudarte?` }
+        { role: 'assistant', text: `¡Hola! Soy el asistente de ${businessName}. ¿Cómo puedo ayudarte?` }
       ]);
   }
 
@@ -239,9 +240,9 @@ export default function Home() {
               <div ref={chatContainerRef} className="flex-grow border rounded-lg p-4 space-y-4 overflow-y-auto h-96 bg-muted/20">
                 {messages.map((msg, index) => (
                   <div key={index} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                    {msg.role === 'bot' && <Bot className="w-6 h-6 text-primary flex-shrink-0" />}
+                    {msg.role === 'assistant' && <Bot className="w-6 h-6 text-primary flex-shrink-0" />}
                     <div className={`rounded-lg px-4 py-2 max-w-sm ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}>
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <p className="whitespace-pre-wrap">{msg.text}</p>
                     </div>
                      {msg.role === 'user' && <User className="w-6 h-6 text-primary flex-shrink-0" />}
                   </div>
