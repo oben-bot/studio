@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2, Wand2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2, Wand2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { refineKnowledgeFlow } from '@/ai/flows/refineKnowledgeFlow';
 import { imageToTextFlow } from '@/ai/flows/imageToTextFlow';
 import { useToast } from "@/hooks/use-toast";
+import { ChatbotInterface } from '@/components/ChatbotInterface';
 
 if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -25,6 +26,7 @@ const fileToDataUri = (file: File): Promise<string> => {
   });
 };
 
+type Mode = 'create' | 'test';
 
 export default function Home() {
   const [knowledge, setKnowledge] = useState('');
@@ -32,6 +34,7 @@ export default function Home() {
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [isRefining, setIsRefining] = useState(false);
   const [refineInput, setRefineInput] = useState('');
+  const [mode, setMode] = useState<Mode>('create');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -122,11 +125,29 @@ export default function Home() {
         });
         return;
       }
-      
-      toast({
-        title: "Asistente Listo para Probar",
-        description: "La base de conocimiento está cargada. Ahora puedes simular una conversación o desplegar tu chatbot.",
-      });
+      setMode('test');
+  };
+
+  if (mode === 'test') {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
+         <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
+          <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <Bot className="w-8 h-8 text-primary" />
+              <h1 className="text-xl font-bold tracking-tight">Probando: {businessName}</h1>
+            </div>
+            <Button variant="outline" onClick={() => setMode('create')}>
+              <ArrowLeft className="mr-2" />
+              Volver al Editor
+            </Button>
+          </div>
+        </header>
+        <main className="flex-grow container mx-auto p-4 md:p-6">
+            <ChatbotInterface businessName={businessName} knowledgeBase={knowledge} />
+        </main>
+      </div>
+    )
   }
 
   return (
