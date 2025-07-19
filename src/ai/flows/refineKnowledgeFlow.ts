@@ -3,26 +3,15 @@
  * @fileOverview A flow to refine a raw text into a structured knowledge base.
  *
  * - refineKnowledgeFlow - Takes raw text and returns a structured version.
- * - RefineKnowledgeInput - Input schema for the flow.
- * - RefineKnowledgeOutput - Output schema for the flow.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-
-export const RefineKnowledgeInputSchema = z.object({
-  rawText: z.string().describe('The raw, unstructured text to be refined.'),
-});
-export type RefineKnowledgeInput = z.infer<typeof RefineKnowledgeInputSchema>;
-
-export const RefineKnowledgeOutputSchema = z.object({
-  refinedText: z
-    .string()
-    .describe(
-      'The refined, well-structured text, formatted nicely for a knowledge base. Use markdown like headings, lists, and bold text.'
-    ),
-});
-export type RefineKnowledgeOutput = z.infer<typeof RefineKnowledgeOutputSchema>;
+import {
+  RefineKnowledgeInputSchema,
+  RefineKnowledgeOutputSchema,
+  type RefineKnowledgeInput,
+  type RefineKnowledgeOutput,
+} from './schemas';
 
 export async function refineKnowledgeFlow(
   input: RefineKnowledgeInput
@@ -39,7 +28,7 @@ ${input.rawText}
 Refined Text (using markdown):
 `,
     output: {
-        schema: RefineKnowledgeOutputSchema,
+      schema: RefineKnowledgeOutputSchema,
     },
     config: {
       temperature: 0.3,
