@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useId } from 'react';
 import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2, Wand2, Palette, Monitor, Download, RefreshCw, MessageSquarePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,8 +28,6 @@ const fileToDataUri = (file: File): Promise<string> => {
   });
 };
 
-type Mode = 'create' | 'customize' | 'test';
-
 export default function Home() {
   const [knowledge, setKnowledge] = useState('');
   const [businessName, setBusinessName] = useState('');
@@ -39,13 +37,13 @@ export default function Home() {
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [isRefining, setIsRefining] = useState(false);
   const [refineInput, setRefineInput] = useState('');
-  const [mode, setMode] = useState<Mode>('create');
   const [activeTab, setActiveTab] = useState('create');
   const [primaryColor, setPrimaryColor] = useState('hsl(25 95% 53%)');
   const [feedbackKnowledge, setFeedbackKnowledge] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const chatbotInterfaceId = useId(); // Unique key for ChatbotInterface
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -175,7 +173,7 @@ export default function Home() {
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Bot className="w-8 h-8 text-primary" />
-            <h1 className="text-xl font-bold tracking-tight">Creador de Asistentes de IA</h1>
+            <h1 className="text-xl font-bold tracking-tight">IA autónoma</h1>
           </div>
           <Button variant="outline" size="icon">
             <Settings className="w-5 h-5" />
@@ -281,7 +279,7 @@ export default function Home() {
                      <div className="flex flex-col items-center justify-center bg-muted/30 p-4 rounded-lg">
                         <CardTitle className="mb-4">Previsualización</CardTitle>
                         <div className="w-full max-w-sm" style={{ '--primary': primaryColor } as React.CSSProperties}>
-                           <ChatbotInterface businessName={businessName} knowledgeBase={fullKnowledgeBase} isPreview={true} />
+                           <ChatbotInterface key={chatbotInterfaceId} businessName={businessName} knowledgeBase={fullKnowledgeBase} isPreview={true} />
                         </div>
                      </div>
                 </div>
@@ -295,7 +293,7 @@ export default function Home() {
                                 <CardDescription>Conversa con tu IA para asegurarte de que responde como esperas.</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <ChatbotInterface businessName={businessName} knowledgeBase={fullKnowledgeBase} />
+                                <ChatbotInterface key={chatbotInterfaceId} businessName={businessName} knowledgeBase={fullKnowledgeBase} />
                             </CardContent>
                         </Card>
                     </div>
