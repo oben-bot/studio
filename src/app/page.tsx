@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
 import { refineKnowledgeFlow } from '@/ai/flows/refineKnowledgeFlow';
-import { imageToTextFlow } from '@/ai/flows/imageToTextFlow';
 import { useToast } from "@/hooks/use-toast";
 import { ChatbotInterface } from '@/components/ChatbotInterface';
 import { cn } from '@/lib/utils';
@@ -20,15 +19,6 @@ import Image from 'next/image';
 if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 }
-
-const fileToDataUri = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
 
 export default function Home() {
   const [knowledge, setKnowledge] = useState('');
@@ -57,11 +47,7 @@ export default function Home() {
     let textContent = '';
 
     try {
-      if (file.type.startsWith('image/')) {
-        const dataUri = await fileToDataUri(file);
-        const extractedText = await imageToTextFlow({ photoDataUri: dataUri });
-        textContent = extractedText;
-      } else if (file.type === 'application/pdf') {
+        if (file.type === 'application/pdf') {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
         const numPages = pdf.numPages;
@@ -76,8 +62,16 @@ export default function Home() {
         const arrayBuffer = await file.arrayBuffer();
         const result = await mammoth.extractRawText({ arrayBuffer });
         textContent = result.value;
-      } else {
+      } else if (file.type.startsWith('text/') || file.name.endsWith('.md')) {
         textContent = await file.text();
+      } else {
+        toast({
+          title: "Tipo de archivo no soportado",
+          description: `El archivo "${file.name}" no es un documento de texto, PDF o Word válido.`,
+          variant: "destructive",
+        });
+        setIsProcessingFile(false);
+        return;
       }
       setKnowledge(prev => prev ? `${prev}\n\n--- Contenido de ${file.name} ---\n${textContent}` : `--- Contenido de ${file.name} ---\n${textContent}`);
       toast({
@@ -198,7 +192,12 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans" style={{ '--primary': primaryColor } as React.CSSProperties}>
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
+       <style jsx global>{`
+        :root {
+          --primary: ${primaryColor};
+        }
+      `}</style>
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -250,9 +249,9 @@ export default function Home() {
                                 <div className="flex gap-2">
                                     <Button variant="outline" className="w-full" onClick={handleUploadClick} disabled={isProcessingFile}>
                                     {isProcessingFile ? <Loader2 className="mr-2 animate-spin" /> : <Upload className="mr-2" />}
-                                    Subir Archivo/Imagen
+                                    Subir Archivo
                                     </Button>
-                                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".txt,.md,.pdf,.docx,image/png,image/jpeg,image/jpg"/>
+                                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".txt,.md,.pdf,.docx"/>
                                 </div>
                             </CardContent>
                         </Card>
