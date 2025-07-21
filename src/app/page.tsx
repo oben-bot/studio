@@ -111,8 +111,8 @@ export default function Home() {
     } catch (error: any) {
       console.error('Error processing file:', error);
       let description = `No se pudo procesar el archivo "${file.name}".`;
-      if (typeof error.message === 'string' && error.message.includes('503')) {
-          description = "El servicio de IA está sobrecargado en este momento. Por favor, inténtalo de nuevo más tarde.";
+      if (typeof error.message === 'string' && (error.message.includes('503') || error.message.includes('500'))) {
+          description = "El servicio de IA no está disponible o está sobrecargado en este momento. Por favor, inténtalo de nuevo más tarde.";
       }
        toast({
           title: "Error al Procesar Archivo",
@@ -471,3 +471,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
