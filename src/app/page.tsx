@@ -2,14 +2,16 @@
 'use client';
 
 import { useState, useRef, useCallback, useId, useEffect } from 'react';
-import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2, Wand2, Palette, Monitor, Download, RefreshCw, MessageSquarePlus, Image as ImageIcon } from 'lucide-react';
+import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2, Wand2, Palette, Monitor, Download, RefreshCw, MessageSquarePlus, Image as ImageIcon, Sun, Moon, Laptop } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
+import { useTheme } from "next-themes";
 import { refineKnowledgeFlow } from '@/ai/flows/refineKnowledgeFlow';
 import { imageToTextFlow } from '@/ai/flows/imageToTextFlow';
 import { analyzeLogoFlow } from '@/ai/flows/analyzeLogoFlow';
@@ -46,11 +48,13 @@ export default function Home() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [colorPalette, setColorPalette] = useState(defaultPalette);
   const [isExtractingColors, setIsExtractingColors] = useState(false);
+  const [completedBots] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const chatbotInterfaceId = useId();
+  const { setTheme } = useTheme();
 
   const isNextStepDisabled = !businessName.trim() || !knowledge.trim();
 
@@ -111,7 +115,7 @@ export default function Home() {
     } catch (error: any) {
       console.error('Error processing file:', error);
       let description = `No se pudo procesar el archivo "${file.name}".`;
-      if (typeof error.message === 'string' && (error.message.includes('503') || error.message.includes('500'))) {
+      if (typeof error.message === 'string' && (error.message.includes('503') || error.message.includes('500') || error.message.includes('Internal Server Error'))) {
           description = "El servicio de IA no está disponible o está sobrecargado en este momento. Por favor, inténtalo de nuevo más tarde.";
       }
        toast({
@@ -281,9 +285,45 @@ export default function Home() {
             <Bot className="w-8 h-8 text-primary" />
             <h1 className="text-xl font-bold tracking-tight">IA autónoma</h1>
           </div>
-          <Button variant="outline" size="icon">
-            <Settings className="w-5 h-5" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Settings className="w-5 h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Apariencia</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setTheme("light")}>
+                <Sun className="mr-2 h-4 w-4" />
+                <span>Claro</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("dark")}>
+                <Moon className="mr-2 h-4 w-4" />
+                <span>Oscuro</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("system")}>
+                <Laptop className="mr-2 h-4 w-4" />
+                <span>Sistema</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+               <DropdownMenuLabel>Estadísticas</DropdownMenuLabel>
+                <DropdownMenuItem disabled>
+                    <span>Chatbots Creados: {completedBots}</span>
+                </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                <span>Verificar Actualizaciones</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                Ayuda
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Creado por OBNKodeX
+              </DropdownMenuLabel>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
        <main className="flex-grow container mx-auto p-4 md:p-6">
@@ -471,5 +511,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

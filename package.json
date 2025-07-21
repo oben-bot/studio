@@ -51,6 +51,7 @@
     "mammoth": "^1.7.2",
     "mysql": "^2.18.1",
     "next": "15.3.3",
+    "next-themes": "^0.3.0",
     "patch-package": "^8.0.0",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "2.6.347",
