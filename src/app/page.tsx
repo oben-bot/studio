@@ -48,7 +48,7 @@ export default function Home() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [colorPalette, setColorPalette] = useState(defaultPalette);
   const [isExtractingColors, setIsExtractingColors] = useState(false);
-  const [completedBots] = useState(0);
+  const [completedBots, setCompletedBots] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -276,6 +276,13 @@ export default function Home() {
     document.documentElement.style.setProperty('--primary-hsl', primaryColor);
   }, [primaryColor]);
 
+  const handleExport = (type: 'link' | 'file') => {
+    toast({
+      title: `Exportación de ${type === 'link' ? 'Link' : 'Archivo'}`,
+      description: "Esta funcionalidad está en desarrollo y estará disponible pronto.",
+      variant: "default",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
@@ -491,8 +498,8 @@ export default function Home() {
                                 <CardDescription>Obtén tu chatbot para usarlo donde quieras.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-2">
-                               <Button className="w-full" variant="outline" disabled>Obtener Link (Próximamente)</Button>
-                               <Button className="w-full" variant="outline" disabled>Descargar Archivo (Próximamente)</Button>
+                               <Button className="w-full" variant="outline" onClick={() => handleExport('link')}>Obtener Link</Button>
+                               <Button className="w-full" variant="outline" onClick={() => handleExport('file')}>Descargar Archivo</Button>
                             </CardContent>
                         </Card>
                     </div>
