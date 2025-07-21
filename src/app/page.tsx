@@ -97,11 +97,15 @@ export default function Home() {
         title: "Archivo Procesado",
         description: `El contenido de "${file.name}" ha sido añadido a la base de conocimiento.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing file:', error);
+      let description = `No se pudo procesar el archivo "${file.name}".`;
+      if (typeof error.message === 'string' && error.message.includes('503')) {
+          description = "El servicio de IA está sobrecargado en este momento. Por favor, inténtalo de nuevo más tarde.";
+      }
        toast({
-          title: "Error al Subir Archivo",
-          description: `No se pudo procesar el archivo "${file.name}".`,
+          title: "Error al Procesar Archivo",
+          description: description,
           variant: "destructive",
         });
     } finally {
