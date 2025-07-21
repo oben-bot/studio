@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useId } from 'react';
-import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2, Wand2, Palette, Monitor, Download, RefreshCw, MessageSquarePlus } from 'lucide-react';
+import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2, Wand2, Palette, Monitor, Download, RefreshCw, MessageSquarePlus, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +14,8 @@ import { imageToTextFlow } from '@/ai/flows/imageToTextFlow';
 import { useToast } from "@/hooks/use-toast";
 import { ChatbotInterface } from '@/components/ChatbotInterface';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
+
 
 if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -40,8 +42,10 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('create');
   const [primaryColor, setPrimaryColor] = useState('25 95% 53%');
   const [feedbackKnowledge, setFeedbackKnowledge] = useState('');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const chatbotInterfaceId = useId();
 
@@ -98,6 +102,26 @@ export default function Home() {
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
+  
+  const handleLogoUploadClick = () => {
+    logoInputRef.current?.click();
+  };
+
+  const handleLogoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) {
+      toast({ title: "Archivo inválido", description: "Por favor, selecciona un archivo de imagen.", variant: "destructive" });
+      return;
+    };
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoUrl(reader.result as string);
+      // TODO: Implement color extraction from logo
+      toast({ title: "Logo subido", description: "El logo se ha cargado para la previsualización."});
+    };
+    reader.readAsDataURL(file);
+  };
+
 
   const handleRefineKnowledge = async () => {
     if (!refineInput.trim()) return;
@@ -267,19 +291,38 @@ export default function Home() {
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="space-y-2">
+                                <label className="font-medium">Logo del Negocio</label>
+                                <div className="flex items-center gap-4">
+                                  {logoUrl ? (
+                                    <Image src={logoUrl} alt="Logo preview" width={64} height={64} className="rounded-lg object-contain bg-muted/30 p-1" />
+                                  ) : (
+                                    <div className="w-16 h-16 bg-muted/30 rounded-lg flex items-center justify-center text-muted-foreground">
+                                        <ImageIcon/>
+                                    </div>
+                                  )}
+                                  <Button variant="outline" onClick={handleLogoUploadClick}>
+                                      <Upload className="mr-2"/> Subir Logo
+                                  </Button>
+                                  <input type="file" ref={logoInputRef} onChange={handleLogoChange} className="hidden" accept="image/png,image/jpeg,image/jpg,image/gif"/>
+                                </div>
+                             </div>
+                            <div className="space-y-2">
                                 <label className="font-medium">Color Principal</label>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-3">
                                 {colorPalette.map(color => (
-                                    <button key={color.name} onClick={() => applyColorTheme(color.value)} className={cn("h-10 w-10 rounded-full border-2 transition-transform transform hover:scale-110", primaryColor === color.value ? 'border-ring' : 'border-transparent')} style={{ backgroundColor: `hsl(${color.value})` }} aria-label={color.name} />
+                                    <button 
+                                      key={color.name} 
+                                      title={color.name}
+                                      onClick={() => applyColorTheme(color.value)} 
+                                      className={cn("h-10 w-10 rounded-full border-2 transition-all transform hover:scale-110 focus:outline-none", 
+                                        primaryColor === color.value ? 'border-foreground ring-2 ring-offset-2 ring-primary animate-ring-glow' : 'border-transparent'
+                                      )} 
+                                      style={{ backgroundColor: `hsl(${color.value})` }} 
+                                      aria-label={color.name} 
+                                    />
                                 ))}
                                 </div>
                             </div>
-                             <div className="space-y-2">
-                                <label className="font-medium">Logo del Negocio</label>
-                                <Button variant="outline" disabled>
-                                    <Upload className="mr-2"/> Subir Logo (Próximamente)
-                                </Button>
-                             </div>
                         </CardContent>
                     </Card>
                      <div className="flex flex-col items-center justify-center bg-muted/30 p-4 rounded-lg">
