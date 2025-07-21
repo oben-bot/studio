@@ -12,6 +12,7 @@ import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
 import { refineKnowledgeFlow } from '@/ai/flows/refineKnowledgeFlow';
 import { imageToTextFlow } from '@/ai/flows/imageToTextFlow';
+import { analyzeLogoFlow } from '@/ai/flows/analyzeLogoFlow';
 import { useToast } from "@/hooks/use-toast";
 import { ChatbotInterface } from '@/components/ChatbotInterface';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,14 @@ import Image from 'next/image';
 if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 }
+
+const defaultPalette = [
+    { name: 'Naranja', value: '25 95% 53%' },
+    { name: 'Azul', value: '217 91% 60%' },
+    { name: 'Verde', value: '142 71% 45%' },
+    { name: 'Rosa', value: '340 82% 52%' },
+    { name: 'Morado', value: '262 84% 58%' },
+];
 
 export default function Home() {
   const [knowledge, setKnowledge] = useState('');
@@ -35,6 +44,8 @@ export default function Home() {
   const [primaryColor, setPrimaryColor] = useState('25 95% 53%');
   const [feedbackKnowledge, setFeedbackKnowledge] = useState('');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [colorPalette, setColorPalette] = useState(defaultPalette);
+  const [isExtractingColors, setIsExtractingColors] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -130,13 +141,66 @@ export default function Home() {
       toast({ title: "Archivo inválido", description: "Por favor, selecciona un archivo de imagen.", variant: "destructive" });
       return;
     };
+    
+    setIsExtractingColors(true);
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setLogoUrl(reader.result as string);
-      // TODO: Implement color extraction from logo
-      toast({ title: "Logo subido", description: "El logo se ha cargado para la previsualización."});
-    };
     reader.readAsDataURL(file);
+    reader.onloadend = async () => {
+      const base64Data = reader.result as string;
+      setLogoUrl(base64Data);
+      
+      try {
+        const result = await analyzeLogoFlow({ photoDataUri: base64Data });
+        if (result.colors && result.colors.length > 0) {
+            const newPalette = result.colors.map(color => ({ name: color, value: hexToHsl(color) }));
+            setColorPalette(newPalette);
+            // set primary color to first color of palette
+            if (newPalette.length > 0) {
+              applyColorTheme(newPalette[0].value);
+            }
+            toast({ title: "Paleta de colores extraída", description: "Se ha generado una nueva paleta a partir de tu logo."});
+        } else {
+            setColorPalette(defaultPalette);
+            toast({ title: "No se pudieron extraer colores", description: "Usando la paleta por defecto.", variant: "default" });
+        }
+      } catch (error) {
+        console.error("Error extracting colors:", error);
+        setColorPalette(defaultPalette);
+        toast({ title: "Error al extraer colores", description: "Ocurrió un error al analizar el logo. Usando la paleta por defecto.", variant: "destructive" });
+      } finally {
+        setIsExtractingColors(false);
+      }
+    };
+  };
+
+  const hexToHsl = (hex: string): string => {
+    let r = 0, g = 0, b = 0;
+    if (hex.length == 4) {
+      r = parseInt(hex[1] + hex[1], 16);
+      g = parseInt(hex[2] + hex[2], 16);
+      b = parseInt(hex[3] + hex[3], 16);
+    } else if (hex.length == 7) {
+      r = parseInt(hex.substring(1, 3), 16);
+      g = parseInt(hex.substring(3, 5), 16);
+      b = parseInt(hex.substring(5, 7), 16);
+    }
+    r /= 255; g /= 255; b /= 255;
+    let max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0, l = (max + min) / 2;
+    if (max != min) {
+      let d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+    h = Math.round(h * 360);
+    s = Math.round(s * 100);
+    l = Math.round(l * 100);
+    return `${h} ${s}% ${l}%`;
   };
 
 
@@ -190,14 +254,6 @@ export default function Home() {
       description: "El chatbot ha incorporado tu retroalimentación.",
     });
   }, [feedbackKnowledge, toast]);
-
-  const colorPalette = [
-    { name: 'Naranja', value: '25 95% 53%' },
-    { name: 'Azul', value: '217 91% 60%' },
-    { name: 'Verde', value: '142 71% 45%' },
-    { name: 'Rosa', value: '340 82% 52%' },
-    { name: 'Morado', value: '262 84% 58%' },
-  ];
   
   const fullKnowledgeBase = `
     ${knowledge}
@@ -320,27 +376,32 @@ export default function Home() {
                                         <ImageIcon/>
                                     </div>
                                   )}
-                                  <Button variant="outline" onClick={handleLogoUploadClick}>
-                                      <Upload className="mr-2"/> Subir Logo
+                                  <Button variant="outline" onClick={handleLogoUploadClick} disabled={isExtractingColors}>
+                                    {isExtractingColors ? <Loader2 className="mr-2 animate-spin"/> : <Upload className="mr-2"/>} 
+                                    Subir Logo
                                   </Button>
                                   <input type="file" ref={logoInputRef} onChange={handleLogoChange} className="hidden" accept="image/png,image/jpeg,image/jpg,image/gif"/>
                                 </div>
                              </div>
                             <div className="space-y-2">
                                 <label className="font-medium">Color Principal</label>
-                                <div className="flex flex-wrap gap-3">
-                                {colorPalette.map(color => (
-                                    <button 
-                                      key={color.name} 
-                                      title={color.name}
-                                      onClick={() => applyColorTheme(color.value)} 
-                                      className={cn("h-10 w-10 rounded-full border-2 transition-all transform hover:scale-110 focus:outline-none", 
-                                        primaryColor === color.value ? 'border-primary ring-2 ring-offset-2 ring-primary animate-ring-glow' : 'border-transparent'
-                                      )} 
-                                      style={{ backgroundColor: `hsl(${color.value})` }} 
-                                      aria-label={color.name} 
-                                    />
-                                ))}
+                                 <div className="flex flex-wrap gap-3">
+                                    {isExtractingColors ? (
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin"/> Extrayendo colores...</div>
+                                    ) : (
+                                        colorPalette.map(color => (
+                                            <button 
+                                            key={color.name} 
+                                            title={color.name}
+                                            onClick={() => applyColorTheme(color.value)} 
+                                            className={cn("h-10 w-10 rounded-full border-2 transition-all transform hover:scale-110 focus:outline-none", 
+                                                primaryColor === color.value ? 'border-primary ring-2 ring-offset-2 ring-primary animate-ring-glow' : 'border-transparent'
+                                            )} 
+                                            style={{ backgroundColor: `hsl(${color.value})` }} 
+                                            aria-label={color.name} 
+                                            />
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         </CardContent>
@@ -348,7 +409,7 @@ export default function Home() {
                      <div className="flex flex-col items-center justify-center bg-muted/30 p-4 rounded-lg">
                         <CardTitle className="mb-4">Previsualización</CardTitle>
                         <div className="w-full max-w-sm">
-                           <ChatbotInterface key={chatbotInterfaceId} businessName={businessName} knowledgeBase={fullKnowledgeBase} isPreview={true} />
+                           <ChatbotInterface key={`${chatbotInterfaceId}-${primaryColor}`} businessName={businessName} knowledgeBase={fullKnowledgeBase} isPreview={true} logoUrl={logoUrl}/>
                         </div>
                      </div>
                 </div>
@@ -362,7 +423,7 @@ export default function Home() {
                                 <CardDescription>Conversa con tu IA para asegurarte de que responde como esperas.</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <ChatbotInterface key={chatbotInterfaceId} businessName={businessName} knowledgeBase={fullKnowledgeBase} />
+                                <ChatbotInterface key={`${chatbotInterfaceId}-test`} businessName={businessName} knowledgeBase={fullKnowledgeBase} logoUrl={logoUrl}/>
                             </CardContent>
                         </Card>
                     </div>
