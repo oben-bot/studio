@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useCallback, useId } from 'react';
@@ -10,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import mammoth from 'mammoth';
 import * as pdfjsLib from 'pdfjs-dist';
 import { refineKnowledgeFlow } from '@/ai/flows/refineKnowledgeFlow';
+import { imageToTextFlow } from '@/ai/flows/imageToTextFlow';
 import { useToast } from "@/hooks/use-toast";
 import { ChatbotInterface } from '@/components/ChatbotInterface';
 import { cn } from '@/lib/utils';
@@ -47,7 +49,22 @@ export default function Home() {
     let textContent = '';
 
     try {
-        if (file.type === 'application/pdf') {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        textContent = await new Promise<string>((resolve, reject) => {
+            reader.onload = async () => {
+                try {
+                    const base64Data = reader.result as string;
+                    const extractedText = await imageToTextFlow({ photoDataUri: base64Data });
+                    resolve(extractedText);
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            reader.onerror = (error) => reject(error);
+        });
+      } else if (file.type === 'application/pdf') {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
         const numPages = pdf.numPages;
@@ -67,7 +84,7 @@ export default function Home() {
       } else {
         toast({
           title: "Tipo de archivo no soportado",
-          description: `El archivo "${file.name}" no es un documento de texto, PDF o Word válido.`,
+          description: `El archivo "${file.name}" no es un documento de texto, PDF, Word o imagen válido.`,
           variant: "destructive",
         });
         setIsProcessingFile(false);
@@ -186,8 +203,6 @@ export default function Home() {
   `;
   
   const applyColorTheme = (color: string) => {
-    const root = document.documentElement;
-    root.style.setProperty('--primary', color);
     setPrimaryColor(color);
   };
 
@@ -251,7 +266,7 @@ export default function Home() {
                                     {isProcessingFile ? <Loader2 className="mr-2 animate-spin" /> : <Upload className="mr-2" />}
                                     Subir Archivo
                                     </Button>
-                                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".txt,.md,.pdf,.docx"/>
+                                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".txt,.md,.pdf,.docx,image/*"/>
                                 </div>
                             </CardContent>
                         </Card>
