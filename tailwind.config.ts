@@ -66,20 +66,20 @@ export default {
           to: { height: "0" },
         },
         "ring-glow": {
-          '0%': {
-            transform: 'scale(1)',
-            opacity: '0.7',
+          '0%, 100%': {
+            boxShadow: '0 0 4px hsl(var(--primary) / 0.5)',
+            borderColor: 'hsl(var(--primary) / 0.7)',
           },
-          '100%': {
-            transform: 'scale(1.05)',
-            opacity: '1',
+          '50%': {
+            boxShadow: '0 0 12px hsl(var(--primary) / 0.7)',
+            borderColor: 'hsl(var(--primary) / 1)',
           },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "ring-glow": "ring-glow 0.3s ease-out forwards",
+        "ring-glow": "ring-glow 1.5s ease-in-out infinite",
       },
     },
   },

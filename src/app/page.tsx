@@ -38,12 +38,12 @@ export default function Home() {
   const [isRefining, setIsRefining] = useState(false);
   const [refineInput, setRefineInput] = useState('');
   const [activeTab, setActiveTab] = useState('create');
-  const [primaryColor, setPrimaryColor] = useState('hsl(25 95% 53%)');
+  const [primaryColor, setPrimaryColor] = useState('25 95% 53%');
   const [feedbackKnowledge, setFeedbackKnowledge] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const chatbotInterfaceId = useId(); // Unique key for ChatbotInterface
+  const chatbotInterfaceId = useId();
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -151,11 +151,11 @@ export default function Home() {
   }, [feedbackKnowledge, toast]);
 
   const colorPalette = [
-    { name: 'Naranja', value: 'hsl(25 95% 53%)' },
-    { name: 'Azul', value: 'hsl(217 91% 60%)' },
-    { name: 'Verde', value: 'hsl(142 71% 45%)' },
-    { name: 'Rosa', value: 'hsl(340 82% 52%)' },
-    { name: 'Morado', value: 'hsl(262 84% 58%)' },
+    { name: 'Naranja', value: '25 95% 53%' },
+    { name: 'Azul', value: '217 91% 60%' },
+    { name: 'Verde', value: '142 71% 45%' },
+    { name: 'Rosa', value: '340 82% 52%' },
+    { name: 'Morado', value: '262 84% 58%' },
   ];
   
   const fullKnowledgeBase = `
@@ -166,9 +166,15 @@ export default function Home() {
     WhatsApp: ${contactWhatsapp || 'No proporcionado'}
     Email de Contacto: ${contactEmail || 'No proporcionado'}
   `;
+  
+  const applyColorTheme = (color: string) => {
+    const root = document.documentElement;
+    root.style.setProperty('--primary', color);
+    setPrimaryColor(color);
+  };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans" style={{ '--primary': primaryColor } as React.CSSProperties}>
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -264,7 +270,7 @@ export default function Home() {
                                 <label className="font-medium">Color Principal</label>
                                 <div className="flex flex-wrap gap-2">
                                 {colorPalette.map(color => (
-                                    <button key={color.name} onClick={() => setPrimaryColor(color.value)} className={cn("h-10 w-10 rounded-full border-2 transition-transform transform hover:scale-110", primaryColor === color.value ? 'border-ring' : 'border-transparent')} style={{ backgroundColor: color.value }} aria-label={color.name} />
+                                    <button key={color.name} onClick={() => applyColorTheme(color.value)} className={cn("h-10 w-10 rounded-full border-2 transition-transform transform hover:scale-110", primaryColor === color.value ? 'border-ring' : 'border-transparent')} style={{ backgroundColor: `hsl(${color.value})` }} aria-label={color.name} />
                                 ))}
                                 </div>
                             </div>
@@ -278,7 +284,7 @@ export default function Home() {
                     </Card>
                      <div className="flex flex-col items-center justify-center bg-muted/30 p-4 rounded-lg">
                         <CardTitle className="mb-4">Previsualización</CardTitle>
-                        <div className="w-full max-w-sm" style={{ '--primary': primaryColor } as React.CSSProperties}>
+                        <div className="w-full max-w-sm">
                            <ChatbotInterface key={chatbotInterfaceId} businessName={businessName} knowledgeBase={fullKnowledgeBase} isPreview={true} />
                         </div>
                      </div>
