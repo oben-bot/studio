@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useCallback, useId } from 'react';
+import { useState, useRef, useCallback, useId, useEffect } from 'react';
 import { Bot, User, Send, Upload, Settings, BrainCircuit, Loader2, Wand2, Palette, Monitor, Download, RefreshCw, MessageSquarePlus, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,8 @@ export default function Home() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const chatbotInterfaceId = useId();
+
+  const isNextStepDisabled = !businessName.trim() || !knowledge.trim();
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -159,7 +161,7 @@ export default function Home() {
   };
   
   const handleProceed = () => {
-     if (!knowledge.trim() || !businessName.trim()) {
+     if (isNextStepDisabled) {
         toast({
           title: "Información Requerida",
           description: "Por favor, ingresa el nombre del negocio y la base de conocimiento antes de continuar.",
@@ -205,14 +207,14 @@ export default function Home() {
   const applyColorTheme = (color: string) => {
     setPrimaryColor(color);
   };
+  
+  useEffect(() => {
+    document.documentElement.style.setProperty('--primary-hsl', primaryColor);
+  }, [primaryColor]);
+
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
-       <style jsx global>{`
-        :root {
-          --primary: ${primaryColor};
-        }
-      `}</style>
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -228,8 +230,8 @@ export default function Home() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="create"><BrainCircuit className="mr-2"/>1. Entrenar</TabsTrigger>
-                <TabsTrigger value="customize" disabled={!businessName || !knowledge}><Palette className="mr-2"/>2. Personalizar</TabsTrigger>
-                <TabsTrigger value="test" disabled={!businessName || !knowledge}><Monitor className="mr-2"/>3. Probar</TabsTrigger>
+                <TabsTrigger value="customize" disabled={isNextStepDisabled}><Palette className="mr-2"/>2. Personalizar</TabsTrigger>
+                <TabsTrigger value="test" disabled={isNextStepDisabled}><Monitor className="mr-2"/>3. Probar</TabsTrigger>
             </TabsList>
             <TabsContent value="create" className="mt-6">
                  <div className="grid md:grid-cols-2 gap-8">
@@ -329,7 +331,7 @@ export default function Home() {
                                       title={color.name}
                                       onClick={() => applyColorTheme(color.value)} 
                                       className={cn("h-10 w-10 rounded-full border-2 transition-all transform hover:scale-110 focus:outline-none", 
-                                        primaryColor === color.value ? 'border-foreground ring-2 ring-offset-2 ring-primary animate-ring-glow' : 'border-transparent'
+                                        primaryColor === color.value ? 'border-primary ring-2 ring-offset-2 ring-primary animate-ring-glow' : 'border-transparent'
                                       )} 
                                       style={{ backgroundColor: `hsl(${color.value})` }} 
                                       aria-label={color.name} 
@@ -395,7 +397,7 @@ export default function Home() {
         
         <div className="mt-6 flex justify-end">
             {activeTab !== 'test' && (
-                <Button onClick={handleProceed} disabled={!businessName || !knowledge}>
+                <Button onClick={handleProceed} disabled={isNextStepDisabled}>
                     {activeTab === 'create' ? 'Siguiente: Personalizar' : 'Siguiente: Probar'}
                 </Button>
             )}

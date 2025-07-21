@@ -13,7 +13,7 @@
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 25 95% 53%; /* Naranja #D45500 */
+    --primary: var(--primary-hsl, 25 95% 53%); /* Naranja #D45500 */
     --primary-foreground: 210 40% 98%;
 
     --secondary: 217 33% 25%;
@@ -30,7 +30,7 @@
 
     --border: 217 33% 20%;
     --input: 217 33% 20%;
-    --ring: 25 95% 53%;
+    --ring: var(--primary-hsl, 25 95% 53%);
 
     --radius: 0.5rem;
   }
@@ -45,7 +45,7 @@
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 25 95% 53%;
+    --primary: var(--primary-hsl, 25 95% 53%);
     --primary-foreground: 210 40% 98%;
 
     --secondary: 217 33% 25%;
@@ -62,7 +62,7 @@
 
     --border: 217 33% 20%;
     --input: 217 33% 20%;
-    --ring: 25 95% 53%;
+    --ring: var(--primary-hsl, 25 95% 53%);
   }
 }
 
@@ -75,5 +75,3 @@
     font-family: var(--font-inter), sans-serif;
   }
 }
-
-    

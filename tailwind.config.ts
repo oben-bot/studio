@@ -68,11 +68,11 @@ export default {
         "ring-glow": {
           '0%, 100%': {
             boxShadow: '0 0 4px hsl(var(--primary) / 0.5)',
-            borderColor: 'hsl(var(--primary) / 0.7)',
+            borderColor: 'hsl(var(--primary))',
           },
           '50%': {
             boxShadow: '0 0 12px hsl(var(--primary) / 0.7)',
-            borderColor: 'hsl(var(--primary) / 1)',
+            borderColor: 'hsl(var(--primary))',
           },
         },
       },
